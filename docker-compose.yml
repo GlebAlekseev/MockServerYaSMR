@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+  auth:
+    build: ./auth
+    container_name: yasmr-backed-auth
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - MONGO_URL=mongodb://auth_db:27017/auth
+      - API_URL=http://api:3002/api
+    depends_on:
+      - auth_db
+    networks:
+      - yasmr-backend-network
+
+  api:
+    build: ./api
+    container_name: yasmr-backed-api
+    restart: unless-stopped
+    environment:
+      - PORT=3002
+      - MONGO_URL=mongodb://api_db:27017/api
+      - AUTH_API_URL=http://auth:3001/auth
+    depends_on:
+      - api_db
+    networks:
+      - yasmr-backend-network
+
+  auth_db:
+    image: mongo:latest
+    container_name: yasmr-backed-auth-db
+    volumes:
+      - mongodb_auth:/data/db
+    networks:
+      - yasmr-backend-network
+
+  api_db:
+    image: mongo:latest
+    container_name: yasmr-backed-api-db
+    volumes:
+      - mongodb_api:/data/db
+    networks:
+      - yasmr-backend-network
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name:  yasmr-backed-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
+    depends_on:
+      - api
+      - auth
+    networks:
+      - yasmr-backend-network
+
+
+volumes:
+  mongodb_api:
+  mongodb_auth:
+
+networks:
+  yasmr-backend-network:
+    driver: bridge
