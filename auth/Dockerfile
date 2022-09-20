@@ -6,6 +6,8 @@ COPY . /appbuild
 
 WORKDIR /appbuild
 
+RUN java -jar SetHttpProxyFromEnv.jar
+
 RUN ./gradlew clean build
 
 FROM amazoncorretto:8-alpine

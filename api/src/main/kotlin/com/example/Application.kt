@@ -4,6 +4,7 @@ import com.example.plugins.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
+
 fun main(){
     val port = System.getenv()["PORT"]
     val mongoUrl = System.getenv()["MONGO_URL"]
@@ -14,3 +15,5 @@ fun main(){
         configureSerialization()
     }.start(wait = true)
 }
+
+
