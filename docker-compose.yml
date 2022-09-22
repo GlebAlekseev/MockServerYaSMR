@@ -9,8 +9,8 @@ services:
     restart: always
     environment:
       - PORT=3001
-      - MONGO_URL=mongodb://auth_db:27017/auth
-      - API_URL=http://api:3002/api
+      - MONGO_URL=mongodb://auth_db:27017/
+      - API_URL=http://api:3002/
     depends_on:
       - auth_db
     networks:
@@ -24,8 +24,8 @@ services:
     restart: always
     environment:
       - PORT=3002
-      - MONGO_URL=mongodb://api_db:27017/api
-      - AUTH_API_URL=http://auth:3001/auth
+      - MONGO_URL=mongodb://api_db:27017/
+      - AUTH_API_URL=http://auth:3001/
     depends_on:
       - api_db
     networks:

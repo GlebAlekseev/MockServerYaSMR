@@ -1,4 +1,4 @@
-FROM gradle:7.4-jdk8 AS buildAuth
+FROM gradle:7.4-jdk11 AS buildAuth
 
 RUN mkdir /appbuild
 

@@ -1,4 +1,4 @@
-FROM gradle:7.4-jdk8 AS buildApi
+FROM gradle:7.4-jdk11 AS buildApi
 
 RUN mkdir /appbuild
 
@@ -10,7 +10,7 @@ RUN java -jar SetHttpProxyFromEnv.jar
 
 RUN gradle clean build
 
-FROM amazoncorretto:8-alpine
+FROM amazoncorretto:11-alpine
 
 ENV APPLICATION_USER 1033
 
