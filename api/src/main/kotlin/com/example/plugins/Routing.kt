@@ -8,7 +8,7 @@ import io.ktor.server.request.*
 
 fun Application.configureRouting() {
     routing {
-        get("/api") {
+        get("/") {
             call.respondText("Api response")
         }
     }

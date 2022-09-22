@@ -21,11 +21,5 @@ services:
     ports:
       - "8702:3002"
 
-#  nginx:
-#    volumes:
-#      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
-#
-
 # docker-compose -f docker-compose.yml -f docker-compose.development.yml up --build
-# docker-compose up --build
 
