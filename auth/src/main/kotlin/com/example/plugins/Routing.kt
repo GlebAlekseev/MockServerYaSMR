@@ -9,7 +9,7 @@ import io.ktor.server.request.*
 fun Application.configureRouting() {
     routing {
         get("/auth") {
-            call.respondText("Auth response")
+            call.respondText("Auth response Я наконец сделал лайв релоад на котлинеееее УРАРАРА")
         }
     }
 }

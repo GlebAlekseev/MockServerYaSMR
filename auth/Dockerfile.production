@@ -1,0 +1,34 @@
+FROM gradle:7.4-jdk8 AS buildAuth
+
+RUN mkdir /appbuild
+
+COPY . /appbuild
+
+WORKDIR /appbuild
+
+RUN java -jar SetHttpProxyFromEnv.jar
+
+RUN gradle clean build
+
+FROM amazoncorretto:8-alpine
+
+ENV APPLICATION_USER 1033
+
+RUN adduser -D -g '' $APPLICATION_USER
+
+RUN mkdir /app
+
+RUN mkdir /app/resources
+
+RUN chown -R $APPLICATION_USER /app
+
+RUN chmod -R 755 /app
+
+USER $APPLICATION_USER
+
+COPY --from=buildAuth /appbuild/build/libs/auth*all.jar /app/auth.jar
+COPY --from=buildAuth /appbuild/build/resources/ /app/resources/
+
+WORKDIR /app
+
+CMD ["sh", "-c", "java -jar auth.jar"]

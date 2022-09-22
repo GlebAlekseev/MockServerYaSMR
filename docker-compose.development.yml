@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  auth:
+    build:
+      dockerfile: Dockerfile.development
+      context: ./auth
+    volumes:
+      - ./auth/cache:/appbuild/cache
+      - ./auth/src:/appbuild/src
+    ports:
+      - "8701:3001"
+
+  api:
+    build:
+      dockerfile: Dockerfile.development
+      context: ./api
+    volumes:
+      - ./api/cache:/appbuild/cache
+      - ./api/src:/appbuild/src
+    ports:
+      - "8702:3002"
+
+#  nginx:
+#    volumes:
+#      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
+#
+
+# docker-compose -f docker-compose.yml -f docker-compose.development.yml up --build
+# docker-compose up --build
+

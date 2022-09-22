@@ -1,0 +1,15 @@
+FROM gradle:7.4-jdk8 AS buildAuth
+
+RUN mkdir /appbuild
+
+COPY . /appbuild
+
+WORKDIR /appbuild
+
+RUN java -jar SetHttpProxyFromEnv.jar
+
+ENV DEVELOPMENT=true
+
+ENV GRADLE_USER_HOME=/appbuild/cache
+
+CMD ["sh","-c","gradle --no-daemon run & gradle --no-daemon -t build"]

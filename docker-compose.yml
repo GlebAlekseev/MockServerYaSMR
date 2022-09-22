@@ -2,9 +2,11 @@ version: '3'
 
 services:
   auth:
-    build: ./auth
+    build:
+      dockerfile: Dockerfile.production
+      context: ./auth
     container_name: yasmr-backed-auth
-    restart: unless-stopped
+    restart: always
     environment:
       - PORT=3001
       - MONGO_URL=mongodb://auth_db:27017/auth
@@ -15,9 +17,11 @@ services:
       - yasmr-backend-network
 
   api:
-    build: ./api
+    build:
+      dockerfile: Dockerfile.production
+      context: ./api
     container_name: yasmr-backed-api
-    restart: unless-stopped
+    restart: always
     environment:
       - PORT=3002
       - MONGO_URL=mongodb://api_db:27017/api
