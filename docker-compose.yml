@@ -1,5 +1,10 @@
 version: '3'
 
+
+  val clientId = System.getenv()["YANDEX_CLIENT_ID"] ?: throw RuntimeException("Отсутствует env YANDEX_CLIENT_ID")
+  val clientSecret = System.getenv()["YANDEX_CLIENT_SECRET"] ?: throw RuntimeException("Отсутствует env YANDEX_CLIENT_SECRET")
+
+
 services:
   auth:
     build:
@@ -11,6 +16,8 @@ services:
       - PORT=3001
       - MONGO_URL=mongodb://auth_db:27017/
       - API_URL=http://api:3002/
+      - YANDEX_CLIENT_ID=${YANDEX_CLIENT_ID}
+      - YANDEX_CLIENT_SECRET=${YANDEX_CLIENT_SECRET}
     depends_on:
       - auth_db
     networks:
