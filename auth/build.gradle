@@ -14,6 +14,10 @@ repositories {
 }
 
 dependencies {
+    implementation "org.litote.kmongo:kmongo-async:$kmongo_version"
+    implementation "org.litote.kmongo:kmongo-serialization:$kmongo_version"
+    implementation "org.litote.kmongo:kmongo-coroutine-serialization:$kmongo_version"
+    implementation "org.litote.kmongo:kmongo-serialization-mapping:$kmongo_version"
 
     implementation "io.ktor:ktor-server-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-server-netty-jvm:$ktor_version"

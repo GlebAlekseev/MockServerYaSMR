@@ -9,9 +9,14 @@ import io.ktor.server.auth.*
 
 
 fun Application.configureOAuthYandex(applicationHttpClient: HttpClient){
+    var issuer = "http://localhost:8080"
+    if (System.getenv()["ISSUER"] != null){
+        issuer = "${System.getenv()["ISSUER"]}auth"
+    }
     install(Authentication) {
         oauth("auth-oauth-google") {
-            urlProvider = { "http://localhost:8080/callback" }
+            println("^^^^^^^^^ redirect ${issuer}/callback")
+            urlProvider = { "${issuer}/callback" }
             providerLookup = {
                 OAuthServerSettings.OAuth2ServerSettings(
                     name = "yandex",

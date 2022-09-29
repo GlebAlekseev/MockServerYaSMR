@@ -1,10 +1,10 @@
-package com.example.model
+package com.example.domain.entity
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class UserInfo(
+data class YandexUser(
     val id:String,
     val login:String,
     @SerialName("client_id") val clientId:String,

@@ -5,6 +5,8 @@ services:
     build:
       dockerfile: Dockerfile.development
       context: ./auth
+    environment:
+      - JWT_ISSUER=http://auth:3001/
     volumes:
       - ./auth/cache:/appbuild/cache
       - ./auth/src:/appbuild/src

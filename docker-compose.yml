@@ -1,10 +1,5 @@
 version: '3'
 
-
-  val clientId = System.getenv()["YANDEX_CLIENT_ID"] ?: throw RuntimeException("Отсутствует env YANDEX_CLIENT_ID")
-  val clientSecret = System.getenv()["YANDEX_CLIENT_SECRET"] ?: throw RuntimeException("Отсутствует env YANDEX_CLIENT_SECRET")
-
-
 services:
   auth:
     build:
@@ -56,13 +51,13 @@ services:
 
   nginx:
     image: nginx:stable-alpine
-    container_name:  yasmr-backed-nginx
+    container_name: yasmr-backed-nginx
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-      - api
+#      - api
       - auth
     networks:
       - yasmr-backend-network
