@@ -27,12 +27,12 @@ object LocalApi {
     private val setTodoRevisionUseCase = SetTodoRevisionUseCase(todoRevisionRepositoryImpl)
 
 
-    suspend fun addTodoItem(todoItem: TodoItem): TodoItem? = addTodoItemUseCase(todoItem)
-    suspend fun updateTodoItem(todoItem: TodoItem): TodoItem? = updateTodoItemUseCase(todoItem)
-    suspend fun removeTodoItem(id: String): TodoItem? = removeTodoItemUseCase(id)
-    suspend fun getTodoItem(id: String): TodoItem? = getTodoItemUseCase(id)
-    suspend fun getTodoList(): List<TodoItem> = getTodoListUseCase()
-    suspend fun updateTodoList(todoList: List<TodoItem>): List<TodoItem> = updateTodoListUseCase(todoList)
+    suspend fun addTodoItem(userId: String, todoItem: TodoItem): TodoItem? = addTodoItemUseCase(userId,todoItem)
+    suspend fun updateTodoItem(userId: String,todoItem: TodoItem): TodoItem? = updateTodoItemUseCase(userId,todoItem)
+    suspend fun removeTodoItem(userId: String,id: String): TodoItem? = removeTodoItemUseCase(userId,id)
+    suspend fun getTodoItem(userId: String,id: String): TodoItem? = getTodoItemUseCase(userId,id)
+    suspend fun getTodoList(userId: String,): List<TodoItem> = getTodoListUseCase(userId)
+    suspend fun updateTodoList(userId: String,todoList: List<TodoItem>): List<TodoItem> = updateTodoListUseCase(userId,todoList)
 
     suspend fun getTodoRevision(userId: String, deviceId: String): TodoRevision? =
         getTodoRevisionUseCase(userId, deviceId)

@@ -1,16 +1,14 @@
 package com.example.plugins
 
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 
 
-fun Application.configureOAuthYandex(applicationHttpClient: HttpClient){
+fun Application.configureOAuthYandex(applicationHttpClient: HttpClient) {
     var issuer = "http://localhost:8080"
-    if (System.getenv()["ISSUER"] != null){
+    if (System.getenv()["ISSUER"] != null) {
         issuer = "${System.getenv()["ISSUER"]}auth"
     }
     install(Authentication) {

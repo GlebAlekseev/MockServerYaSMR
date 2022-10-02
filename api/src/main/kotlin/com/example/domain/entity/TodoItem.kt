@@ -7,7 +7,7 @@ import java.sql.Timestamp
 @Serializable
 data class TodoItem(
     val userId: String,
-    val id: String,
+    val id: String = UNDEFINED,
     val text: String,
     val importance: Importance,
     @Serializable(with = TimeStampAsLong::class)
@@ -21,6 +21,7 @@ data class TodoItem(
     val lastUpdatedBy: Int
 ) {
     companion object {
+        const val UNDEFINED = "-1"
         @Serializable
         enum class Importance {
             LOW,
