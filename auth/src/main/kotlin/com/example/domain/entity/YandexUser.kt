@@ -12,6 +12,6 @@ data class YandexUser(
     @SerialName("real_name") val realName:String,
     @SerialName("first_name") val firstName:String,
     @SerialName("last_name") val lastName:String,
-    val sex: String,
+    val sex: String?,
     val psuid:String
 )

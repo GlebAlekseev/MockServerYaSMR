@@ -43,7 +43,7 @@ object LocalApi {
         return getUserList().lastOrNull { it.yandexId == yandexId }
     }
     suspend fun getNewDeviceIdForUser(id: String): String{
-        return getUserTokenList().filter { it.id == id }.lastOrNull().let { if (it != null) (it.id.toInt()+1).toString() else "1" }
+        return getUserTokenList().filter { it.id == id }.maxOfOrNull { it.deviceId.toInt() }.let { if (it != null) (it + 1).toString() else "1" }
     }
 
     suspend fun getUserTokenWithRefreshToken(refreshToken: String): UserToken? {

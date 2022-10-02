@@ -41,14 +41,12 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             get("/callback") {
                 // Получаю токены от Яндекса
                 val principal: OAuthAccessTokenResponse.OAuth2? = call.principal()
-
                 // Заправшиваю информацию от Яндекса
                 val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
                     headers {
                         append(HttpHeaders.Authorization, "Bearer ${principal?.accessToken}")
                     }
                 }.body()
-
                 val user = LocalApi.getWithYandex(userInfo.id)
                 val resultId: String?
                 if (user == null){
@@ -67,7 +65,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                         refreshTokenYandex = principal.refreshToken!!
                     ))?.id
                 }
-
                 // Получение id нового утсройства
                 val deviceId = LocalApi.getNewDeviceIdForUser(resultId!!)
                 val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
@@ -78,7 +75,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                     refreshToken = tokenPair.refreshToken,
                     refreshTokenExpireAt = Timestamp(System.currentTimeMillis() + refreshLifeTime*1000*60*60*24)
                 ))
-
                 call.respond(tokenPair)
             }
         }
@@ -95,7 +91,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 if(userToken.refreshTokenExpireAt.time > System.currentTimeMillis()){
                     // Токен действителен
                     val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId)
-                    println("^^^^^^^^^^ tokenPAIR=$tokenPair")
                     val res = LocalApi.updateUserToken(UserToken(
                         deviceId = userToken.deviceId,
                         id =  userToken.id,
@@ -113,7 +108,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 call.respond(HttpStatusCode.BadRequest)
             }
         }
-
         // Делаю папку certs статикой
         static(".well-known") {
             staticRootFolder = File("certs")
@@ -137,7 +131,6 @@ fun generateJWT(environment: ApplicationEnvironment,userId: String,deviceId: Str
     // для проверки токена на валидность
     // указываю URI, где находится .well-known/jwks.json
 
-    println("^^^^^^^^ issuer=$issuer")
     val jwkProvider = JwkProviderBuilder(issuer)
         .cached(10, 24, TimeUnit.HOURS)
         .rateLimited(10, 1, TimeUnit.MINUTES)

@@ -15,7 +15,6 @@ fun Application.configureOAuthYandex(applicationHttpClient: HttpClient){
     }
     install(Authentication) {
         oauth("auth-oauth-google") {
-            println("^^^^^^^^^ redirect ${issuer}/callback")
             urlProvider = { "${issuer}/callback" }
             providerLookup = {
                 OAuthServerSettings.OAuth2ServerSettings(

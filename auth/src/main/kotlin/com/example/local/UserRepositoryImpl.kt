@@ -18,7 +18,9 @@ class UserRepositoryImpl(dataBase: CoroutineDatabase): UserRepository {
     }
 
     override suspend fun addUser(user: User): User? {
-        val lastId = getUserList().lastOrNull()?.id ?: "1"
+        var lastId = getUserList().lastOrNull()?.id
+        if (lastId != null) lastId = (lastId.toInt() + 1).toString()
+        else lastId = "1"
         collectionUser.insertOne(user.copy(id = lastId))
         return collectionUser.findOne(User::id eq lastId)
     }
