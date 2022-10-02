@@ -141,7 +141,7 @@ fun generateJWT(environment: ApplicationEnvironment,userId: String,deviceId: Str
     val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
     val accessToken = JWT.create()
         .withAudience(audience)
-        .withIssuer("${issuer}auth")
+        .withIssuer("${issuer}")
         .withClaim("userId", userId)
         .withClaim("deviceId", deviceId)
         .withExpiresAt(Date(System.currentTimeMillis() + 1000*60*accessLifeTime))

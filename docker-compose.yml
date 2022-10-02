@@ -17,6 +17,8 @@ services:
       - auth_db
     networks:
       - yasmr-backend-network
+    logging:
+      driver: none
 
   api:
     build:
@@ -32,8 +34,7 @@ services:
       - api_db
     networks:
       - yasmr-backend-network
-    logging:
-      driver: none
+
 
   auth_db:
     image: mongo:latest
@@ -42,8 +43,8 @@ services:
       - mongodb_auth:/data/db
     networks:
       - yasmr-backend-network
-#    logging:
-#      driver: none
+    logging:
+      driver: none
     ports:
       - 27018:27017
 
@@ -56,6 +57,8 @@ services:
       - yasmr-backend-network
     logging:
       driver: none
+    ports:
+      - 27019:27017
 
   nginx:
     image: nginx:stable-alpine
@@ -65,7 +68,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-#      - api
+      - api
       - auth
     networks:
       - yasmr-backend-network
