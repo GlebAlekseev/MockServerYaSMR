@@ -7,6 +7,8 @@ services:
       context: ./auth
     environment:
       - JWT_ISSUER=http://auth:3001/
+      - JWT_AUDIENCE=https://localhost/api
+      - YANDEX_CALLBACK=https://localhost/auth/callback
     volumes:
       - ./auth/cache:/appbuild/cache
       - ./auth/src:/appbuild/src

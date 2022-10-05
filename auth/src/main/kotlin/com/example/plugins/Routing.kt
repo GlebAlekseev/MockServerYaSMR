@@ -78,11 +78,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 call.respond(tokenPair)
             }
         }
-        get("/"){
-            call.respondText {
-                "mda"
-            }
-        }
 
         post("/refresh") {
             val oldRefreshToken = call.receive<RefreshToken>().refresh_token

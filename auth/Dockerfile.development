@@ -12,8 +12,8 @@ ENV DEVELOPMENT=true
 
 ENV GRADLE_USER_HOME=/appbuild/cache
 
-ENV ISSUER=http://localhost/
+#ENV ISSUER=https://localhost/
 
-ENV AUDIENCE=http://localhost/api
+#ENV AUDIENCE=https://localhost/api
 
 CMD ["sh","-c","gradle --no-daemon run & gradle --no-daemon -t build"]
