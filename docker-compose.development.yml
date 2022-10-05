@@ -29,3 +29,7 @@ services:
 
 # docker-compose -f docker-compose.yml -f docker-compose.development.yml up --build
 
+#  openssl genrsa -out key.pem 1024
+#  openssl req -new -key key.pem -out cert-req.pem
+#  openssl x509 -req -extfile <(printf "subjectAltName=IP:127.0.0.1,IP:192.168.0.102") \
+#  -in cert-req.pem -signkey key.pem -out cert.pem
