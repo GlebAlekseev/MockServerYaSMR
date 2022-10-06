@@ -29,21 +29,21 @@ object LocalApi {
 
     suspend fun addUser(user: User): User? = addUserUseCase(user)
     suspend fun updateUser(user: User): User? = updateUserUseCase(user)
-    suspend fun removeUser(id: String): User? = removeUserUseCase(id)
-    suspend fun getUser(id: String): User? = getUserUseCase(id)
+    suspend fun removeUser(id: Long): User? = removeUserUseCase(id)
+    suspend fun getUser(id: Long): User? = getUserUseCase(id)
     suspend fun getUserList(): List<User> = getUserListUseCase()
 
     suspend fun addUserToken(userToken: UserToken): UserToken? = addUserTokenUseCase(userToken)
     suspend fun updateUserToken(userToken: UserToken): UserToken? = updateUserTokenUseCase(userToken)
-    suspend fun removeUserToken(id: String): UserToken? = removeUserTokenUseCase(id)
-    suspend fun getUserToken(id: String): UserToken? = getUserTokenUseCase(id)
+    suspend fun removeUserToken(id: Long): UserToken? = removeUserTokenUseCase(id)
+    suspend fun getUserToken(id: Long): UserToken? = getUserTokenUseCase(id)
     suspend fun getUserTokenList(): List<UserToken> = getUserTokenListUseCase()
 
-    suspend fun getWithYandex(yandexId: String): User?{
+    suspend fun getWithYandex(yandexId: Long): User?{
         return getUserList().lastOrNull { it.yandexId == yandexId }
     }
-    suspend fun getNewDeviceIdForUser(id: String): String{
-        return getUserTokenList().filter { it.id == id }.maxOfOrNull { it.deviceId.toInt() }.let { if (it != null) (it + 1).toString() else "1" }
+    suspend fun getNewDeviceIdForUser(id: Long): Long{
+        return getUserTokenList().filter { it.id == id }.maxOfOrNull { it.deviceId }.let { if (it != null) it + 1 else 1 }
     }
 
     suspend fun getUserTokenWithRefreshToken(refreshToken: String): UserToken? {

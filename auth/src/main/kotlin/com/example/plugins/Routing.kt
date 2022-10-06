@@ -5,6 +5,7 @@ import com.auth0.jwt.*
 import com.auth0.jwt.algorithms.*
 import com.example.domain.entity.User
 import com.example.domain.entity.UserToken
+import com.example.domain.entity.UserToken.Companion.DAY_MILLIS
 import io.ktor.server.routing.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -34,11 +35,11 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             // Используется клиентом, чтобы зарегистрироваться/войти
             // Далее он будет жить на jwt
             // Если jwt иссякнет, то опять /login
-            get("/login") {
+            get("/authorize") {
                 // Редирект на страницу Яндекса
             }
 
-            get("/callback") {
+            get("/token") {
                 // Получаю токены от Яндекса
                 val principal: OAuthAccessTokenResponse.OAuth2? = call.principal()
                 // Заправшиваю информацию от Яндекса
@@ -47,13 +48,13 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                         append(HttpHeaders.Authorization, "Bearer ${principal?.accessToken}")
                     }
                 }.body()
-                val user = LocalApi.getWithYandex(userInfo.id)
-                val resultId: String?
+                val user = LocalApi.getWithYandex(userInfo.id.toLong())
+                val resultId: Long?
                 if (user == null){
                     // Регистрация
                     resultId = LocalApi.addUser(User(
                         displayName = userInfo.displayName,
-                        yandexId = userInfo.id,
+                        yandexId = userInfo.id.toLong(),
                         accessTokenYandex = principal!!.accessToken,
                         refreshTokenYandex = principal.refreshToken!!
                     ))?.id
@@ -73,7 +74,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                     id = resultId,
                     accessToken = tokenPair.accessToken,
                     refreshToken = tokenPair.refreshToken,
-                    refreshTokenExpireAt = Timestamp(System.currentTimeMillis() + refreshLifeTime*1000*60*60*24)
+                    refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
                 ))
                 call.respond(tokenPair)
             }
@@ -83,7 +84,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             val oldRefreshToken = call.receive<RefreshToken>().refresh_token
             val userToken = LocalApi.getUserTokenWithRefreshToken(oldRefreshToken)
             if (userToken != null){
-                if(userToken.refreshTokenExpireAt.time > System.currentTimeMillis()){
+                if(userToken.refreshTokenExpireAt > System.currentTimeMillis()){
                     // Токен действителен
                     val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId)
                     val res = LocalApi.updateUserToken(UserToken(
@@ -91,7 +92,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                         id =  userToken.id,
                         accessToken = tokenPair.accessToken,
                         refreshToken = tokenPair.refreshToken,
-                        refreshTokenExpireAt = Timestamp(System.currentTimeMillis() + refreshLifeTime*1000*60*60*24)
+                        refreshTokenExpireAt = System.currentTimeMillis() + refreshLifeTime * DAY_MILLIS
                     ))
                     call.respond(res!!)
                 }else{
@@ -111,7 +112,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
     }
 }
 
-fun generateJWT(environment: ApplicationEnvironment,userId: String,deviceId: String): TokenPair {
+fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Long): TokenPair {
     // Приватный ключ RSA
     val privateKeyString = environment.config.property("jwt.access.privateKey").getString()
     // Изготовитель токена
@@ -141,14 +142,11 @@ fun generateJWT(environment: ApplicationEnvironment,userId: String,deviceId: Str
         .withClaim("deviceId", deviceId)
         .withExpiresAt(Date(System.currentTimeMillis() + 1000*60*accessLifeTime))
         .sign(Algorithm.RSA256(publicKey as RSAPublicKey, privateKey as RSAPrivateKey))
-
     val refreshToken = UUID.randomUUID().toString()
-
     return TokenPair(accessToken,refreshToken)
 }
 @kotlinx.serialization.Serializable
 data class TokenPair(val accessToken: String, val refreshToken: String)
-
 
 @kotlinx.serialization.Serializable
 data class RefreshToken(val refresh_token: String)

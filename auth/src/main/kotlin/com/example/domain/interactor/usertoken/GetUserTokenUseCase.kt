@@ -4,5 +4,5 @@ import com.example.domain.entity.UserToken
 import com.example.domain.repository.UserTokenRepository
 
 class GetUserTokenUseCase(private val userTokenRepository: UserTokenRepository) {
-    suspend operator fun invoke(id: String): UserToken? = userTokenRepository.getUserToken(id)
+    suspend operator fun invoke(id: Long): UserToken? = userTokenRepository.getUserToken(id)
 }

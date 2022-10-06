@@ -1,6 +1,7 @@
 package com.example.data.repository.local
 
 import com.example.domain.entity.User
+import com.example.domain.entity.User.Companion.UNDEFINED
 import com.example.domain.repository.UserRepository
 import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
@@ -13,14 +14,14 @@ class UserRepositoryImpl(dataBase: CoroutineDatabase): UserRepository {
         return collectionUser.find().toList()
     }
 
-    override suspend fun getUser(id: String): User? {
+    override suspend fun getUser(id: Long): User? {
         return collectionUser.findOne(User::id eq id)
     }
 
     override suspend fun addUser(user: User): User? {
         var lastId = getUserList().lastOrNull()?.id
-        if (lastId != null) lastId = (lastId.toInt() + 1).toString()
-        else lastId = "1"
+        if (lastId != null) lastId += 1
+        else lastId = UNDEFINED
         collectionUser.insertOne(user.copy(id = lastId))
         return collectionUser.findOne(User::id eq lastId)
     }
@@ -30,7 +31,7 @@ class UserRepositoryImpl(dataBase: CoroutineDatabase): UserRepository {
         return collectionUser.findOne(User::id eq user.id)
     }
 
-    override suspend fun removeUser(id: String): User? {
+    override suspend fun removeUser(id: Long): User? {
         return collectionUser.findOneAndDelete(User::id eq id)
     }
 }

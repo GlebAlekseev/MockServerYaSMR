@@ -13,7 +13,7 @@ class UserTokenRepositoryImpl(dataBase: CoroutineDatabase): UserTokenRepository 
         return collectionUserToken.find().toList()
     }
 
-    override suspend fun getUserToken(deviceId: String): UserToken? {
+    override suspend fun getUserToken(deviceId: Long): UserToken? {
         return collectionUserToken.findOne(UserToken::deviceId eq deviceId)
     }
 
@@ -24,11 +24,11 @@ class UserTokenRepositoryImpl(dataBase: CoroutineDatabase): UserTokenRepository 
     }
 
     override suspend fun updateUserToken(userToken: UserToken): UserToken? {
-        collectionUserToken.updateOne(UserToken::deviceId eq userToken.deviceId,userToken)
+        collectionUserToken.updateOne(UserToken::deviceId eq userToken.deviceId, userToken)
         return collectionUserToken.findOne(UserToken::deviceId eq userToken.deviceId)
     }
 
-    override suspend fun removeUserToken(deviceId: String): UserToken? {
+    override suspend fun removeUserToken(deviceId: Long): UserToken? {
         return collectionUserToken.findOneAndDelete(UserToken::deviceId eq deviceId)
     }
 }
