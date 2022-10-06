@@ -28,7 +28,6 @@ import io.ktor.server.request.*
 import java.sql.Timestamp
 
 fun Application.configureRouting(applicationHttpClient: HttpClient) {
-    val refreshLifeTime = environment.config.property("jwt.refresh.lifetime").getString().toInt()
     routing {
         // Применяю OAuth авторизацию к запросам ниже
         authenticate("auth-oauth-google") {
@@ -92,7 +91,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                         id =  userToken.id,
                         accessToken = tokenPair.accessToken,
                         refreshToken = tokenPair.refreshToken,
-                        refreshTokenExpireAt = System.currentTimeMillis() + refreshLifeTime * DAY_MILLIS
+                        refreshTokenExpireAt = tokenPair.expiresAt
                     ))
                     call.respond(res!!)
                 }else{
@@ -122,6 +121,7 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     // Время жизни access токена в минутах
     val accessLifeTime = environment.config.property("jwt.access.lifetime").getString().toInt()
 
+    val refreshLifeTime = environment.config.property("jwt.refresh.lifetime").getString().toInt()
     // Получаю доступ к JWKS, который хранит публичные ключи
     // jwks.json является статическим файлом, чтобы другие пользователи могли использовать эти публичные ключи,
     // для проверки токена на валидность
@@ -135,18 +135,20 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     val publicKey = jwkProvider.get("test_key").publicKey
     val keySpecPKCS8 = PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyString))
     val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
+    val accessExpiresAt = Date(System.currentTimeMillis() + 1000*60*accessLifeTime)
+    val refreshExpiresAt = Date(System.currentTimeMillis() + refreshLifeTime * DAY_MILLIS)
     val accessToken = JWT.create()
         .withAudience(audience)
         .withIssuer("${issuer}")
         .withClaim("userId", userId)
         .withClaim("deviceId", deviceId)
-        .withExpiresAt(Date(System.currentTimeMillis() + 1000*60*accessLifeTime))
+        .withExpiresAt(accessExpiresAt)
         .sign(Algorithm.RSA256(publicKey as RSAPublicKey, privateKey as RSAPrivateKey))
     val refreshToken = UUID.randomUUID().toString()
-    return TokenPair(accessToken,refreshToken)
+    return TokenPair(accessToken, refreshToken, refreshExpiresAt.time)
 }
 @kotlinx.serialization.Serializable
-data class TokenPair(val accessToken: String, val refreshToken: String)
+data class TokenPair(val accessToken: String, val refreshToken: String, val expiresAt: Long)
 
 @kotlinx.serialization.Serializable
 data class RefreshToken(val refresh_token: String)
