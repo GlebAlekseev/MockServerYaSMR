@@ -8,8 +8,8 @@ import io.ktor.server.auth.*
 
 fun Application.configureOAuthYandex(applicationHttpClient: HttpClient) {
     var issuer = "http://localhost:8080/callback"
-    if (System.getenv()["YANDEX_CALLBACK"] != null) {
-        issuer = System.getenv()["YANDEX_CALLBACK"]!!
+    System.getenv()["YANDEX_CALLBACK"]?.let {
+        issuer = it
     }
     install(Authentication) {
         oauth("auth-oauth-yandex") {

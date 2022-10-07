@@ -32,7 +32,7 @@ fun Application.configureJwt() {
                 }
             }
             challenge { _, _ ->
-                call.respond(
+                return@challenge call.respond(
                     TodoListResponse(
                         status = HttpStatusCode.Unauthorized.value,
                         message = "Unauthorized: access_token не валиден"

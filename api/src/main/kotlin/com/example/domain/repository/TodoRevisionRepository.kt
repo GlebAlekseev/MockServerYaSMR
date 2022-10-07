@@ -1,6 +1,5 @@
 package com.example.domain.repository
 
-import com.example.domain.entity.TodoItem
 import com.example.domain.entity.TodoRevision
 
 interface TodoRevisionRepository {

@@ -1,22 +1,14 @@
 package com.example.data.repository.local
 
-import com.example.domain.entity.TodoItem
 import com.example.domain.entity.TodoRevision
-import com.example.domain.repository.TodoItemRepository
 import com.example.domain.repository.TodoRevisionRepository
 import com.mongodb.client.model.Filters
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.reactive.awaitFirst
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.eq
 
-@OptIn(DelicateCoroutinesApi::class)
-class TodoRevisionRepositoryImpl(private val dataBase: CoroutineDatabase) : TodoRevisionRepository {
+class TodoRevisionRepositoryImpl(dataBase: CoroutineDatabase) : TodoRevisionRepository {
     private val collectionTodoRevision = dataBase.getCollection<TodoRevision>()
 
-    override suspend fun getTodoRevision(userId: String, deviceId: String): TodoRevision? {
+    override suspend fun getTodoRevision(userId: Long, deviceId: Long): TodoRevision? {
         val filter = Filters.and(
             Filters.eq("userId",userId),
             Filters.eq("deviceId",deviceId)
@@ -24,7 +16,7 @@ class TodoRevisionRepositoryImpl(private val dataBase: CoroutineDatabase) : Todo
         return collectionTodoRevision.findOne(filter)
     }
 
-    override suspend fun setTodoRevision(todoRevision: TodoRevision): TodoRevision? {
+    override suspend fun setTodoRevision(todoRevision: TodoRevision): TodoRevision {
         val filter = Filters.and(
             Filters.eq("userId",todoRevision.userId),
             Filters.eq("deviceId",todoRevision.deviceId)

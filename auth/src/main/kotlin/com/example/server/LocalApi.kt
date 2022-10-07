@@ -6,7 +6,6 @@ import com.example.domain.entity.User
 import com.example.domain.entity.UserToken
 import com.example.domain.interactor.user.*
 import com.example.domain.interactor.usertoken.*
-import com.example.plugins.RefreshToken
 import org.litote.kmongo.reactivestreams.*
 import org.litote.kmongo.coroutine.*
 

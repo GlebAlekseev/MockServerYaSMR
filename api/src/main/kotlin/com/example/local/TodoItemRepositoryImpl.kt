@@ -3,12 +3,7 @@ package com.example.data.repository.local
 import com.example.domain.entity.TodoItem
 import com.example.domain.repository.TodoItemRepository
 import com.mongodb.client.model.Filters
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.reactive.awaitFirst
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.coroutine.insertOne
 import org.litote.kmongo.eq
 
 class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {

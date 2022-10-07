@@ -18,25 +18,16 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import java.util.concurrent.TimeUnit
 import com.example.server.LocalApi
+import com.example.server.response.AuthResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
 import io.ktor.http.content.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
-import kotlinx.serialization.json.JsonBuilder
-import kotlinx.serialization.json.buildJsonObject
-import org.json.simple.JSONObject
-import java.sql.Timestamp
+import java.io.IOException
 
-@kotlinx.serialization.Serializable
-data class YandexTokenRequest(
-    val grant_type: String,
-    val code: String
-        )
 fun Application.configureRouting(applicationHttpClient: HttpClient) {
     routing {
         // Применяю OAuth авторизацию к запросам ниже
@@ -49,100 +40,141 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             }
         }
         get("/token") {
-            // Получаю код из параметра
-            val code = call.parameters["code"]
-
-            val httpResponse = applicationHttpClient.post("https://oauth.yandex.ru/token"){
-                headers {
-                    append(HttpHeaders.Authorization, "Basic ${Base64.getEncoder().encodeToString(
-                        "${System.getenv()["YANDEX_CLIENT_ID"]}:${System.getenv()["YANDEX_CLIENT_SECRET"]}".toByteArray())}")
-                    append(HttpHeaders.ContentType,ContentType.Application.FormUrlEncoded)
-                }
-
-                val parameters = Parameters.build {
-                    append("grant_type", "authorization_code")
-                    append("code", code!!)
-                }
-
-                setBody(
-                    TextContent(parameters.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+            checkInternalServerError(call) {
+                // Получаю код из параметра
+                val code = call.parameters["code"] ?: return@get call.respond(
+                    AuthResponse(
+                        status = HttpStatusCode.BadRequest.value,
+                        message = "BadRequest: id не предоставлен"
+                    )
                 )
-            }
-
-            if (httpResponse.status != HttpStatusCode.OK){
-                call.respond(HttpStatusCode.BadRequest)
-                return@get
-            }
-            val principal: YandexPrincipal = httpResponse.body()
-
-            // Заправшиваю информацию от Яндекса
-            val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
-                headers {
-                    append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
+                val httpResponse = applicationHttpClient.post("https://oauth.yandex.ru/token") {
+                    headers {
+                        append(
+                            HttpHeaders.Authorization, "Basic ${
+                                Base64.getEncoder().encodeToString(
+                                    "${System.getenv()["YANDEX_CLIENT_ID"]}:${System.getenv()["YANDEX_CLIENT_SECRET"]}".toByteArray()
+                                )
+                            }"
+                        )
+                        append(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded)
+                    }
+                    val parameters = Parameters.build {
+                        append("grant_type", "authorization_code")
+                        append("code", code)
+                    }
+                    setBody(
+                        TextContent(parameters.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+                    )
                 }
-            }.body()
-            val user = LocalApi.getWithYandex(userInfo.id.toLong())
-            val resultId: Long?
-            if (user == null){
-                // Регистрация
-                resultId = LocalApi.addUser(User(
-                    displayName = userInfo.displayName,
-                    yandexId = userInfo.id.toLong(),
-                    accessTokenYandex = principal.accessToken!!,
-                    refreshTokenYandex = principal.refreshToken!!
-                ))?.id
-            }else{
-                // Авторизация
-                resultId = LocalApi.updateUser(user.copy(
-                    displayName = userInfo.displayName,
-                    accessTokenYandex = principal.accessToken!!,
-                    refreshTokenYandex = principal.refreshToken!!
-                ))?.id
-            }
-            // Получение id нового утсройства
-            val deviceId = LocalApi.getNewDeviceIdForUser(resultId!!)
-            val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
-            LocalApi.addUserToken(UserToken(
-                deviceId = deviceId,
-                id = resultId,
-                accessToken = tokenPair.accessToken,
-                refreshToken = tokenPair.refreshToken,
-                refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
-            ))
-            call.respond(tokenPair)
-        }
+                if (httpResponse.status != HttpStatusCode.OK) {
+                    AuthResponse(
+                        status = HttpStatusCode.BadRequest.value,
+                        message = "BadRequest: code не валиден"
+                    )
+                }
 
-        post("/refresh") {
-            val oldRefreshToken = call.receive<RefreshToken>().refresh_token
-            val userToken = LocalApi.getUserTokenWithRefreshToken(oldRefreshToken)
-            if (userToken != null){
-                if(userToken.refreshTokenExpireAt > System.currentTimeMillis()){
-                    // Токен действителен
-                    val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId)
-                    val res = LocalApi.updateUserToken(UserToken(
-                        deviceId = userToken.deviceId,
-                        id =  userToken.id,
+                val principal: YandexPrincipal = httpResponse.body()
+
+                // Заправшиваю информацию от Яндекса
+                val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
+                    headers {
+                        append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
+                    }
+                }.body()
+                val user = LocalApi.getWithYandex(userInfo.id.toLong())
+                val resultId: Long =
+                if (user == null) {
+                    // Регистрация
+                    LocalApi.addUser(
+                        User(
+                            displayName = userInfo.displayName,
+                            yandexId = userInfo.id.toLong(),
+                            accessTokenYandex = principal.accessToken,
+                            refreshTokenYandex = principal.refreshToken
+                        )
+                    )!!.id
+                } else {
+                    // Авторизация
+                    LocalApi.updateUser(
+                        user.copy(
+                            displayName = userInfo.displayName,
+                            accessTokenYandex = principal.accessToken,
+                            refreshTokenYandex = principal.refreshToken
+                        )
+                    )!!.id
+                }
+                // Получение id нового утсройства
+                val deviceId = LocalApi.getNewDeviceIdForUser(resultId)
+                val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
+                val addedUserToken = LocalApi.addUserToken(
+                    UserToken(
+                        deviceId = deviceId,
+                        id = resultId,
                         accessToken = tokenPair.accessToken,
                         refreshToken = tokenPair.refreshToken,
-                        refreshTokenExpireAt = tokenPair.expiresAt
-                    ))
-                    call.respond(res!!)
-                }else{
-                    // Токен просрочен
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            }else{
-                // Токен не существует
-                call.respond(HttpStatusCode.BadRequest)
+                        refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
+                    )
+                )
+                addedUserToken ?: throw IOException()
+                return@get call.respond(
+                    AuthResponse(
+                        data = tokenPair
+                    )
+                )
             }
         }
-
+        post("/refresh") {
+            checkInternalServerError(call) {
+                val oldRefreshToken = call.receiveNullable<RefreshToken>()
+                val refreshToken = oldRefreshToken?.refresh_token ?: return@post call.respond(
+                    AuthResponse(
+                        status = HttpStatusCode.BadRequest.value,
+                        message = "BadRequest: refresh_token не предоставлен"
+                    )
+                )
+                val userToken = LocalApi.getUserTokenWithRefreshToken(refreshToken)
+                userToken ?: return@post call.respond(
+                    AuthResponse(
+                        status = HttpStatusCode.NotFound.value,
+                        message = "NotFound: Элемент с указанным refresh_token не существует"
+                    )
+                )
+                if (userToken.refreshTokenExpireAt > System.currentTimeMillis()) {
+                    // Токен действителен
+                    val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId)
+                    LocalApi.updateUserToken(
+                        UserToken(
+                            deviceId = userToken.deviceId,
+                            id = userToken.id,
+                            accessToken = tokenPair.accessToken,
+                            refreshToken = tokenPair.refreshToken,
+                            refreshTokenExpireAt = tokenPair.expiresAt
+                        )
+                    )!!
+                    return@post call.respond(
+                        AuthResponse(
+                            data = tokenPair
+                        )
+                    )
+                } else {
+                    return@post call.respond(
+                        AuthResponse(
+                            status = HttpStatusCode.BadRequest.value,
+                            message = "BadRequest: токен просрочен"
+                        )
+                    )
+                }
+            }
+        }
         authenticate("auth-jwt") {
             post("/logout") {
                 val principal = call.principal<JWTPrincipal>()
                 val (userId,deviceId) = getUserInfo(principal)
-                LocalApi.removeUserToken(userId.toLong(),deviceId.toLong())
-                call.respond(HttpStatusCode.OK)
+                LocalApi.removeUserToken(userId.toLong(),deviceId.toLong())!!
+                return@post call.respond(
+                    AuthResponse()
+                )
             }
         }
 
@@ -182,7 +214,7 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     val refreshExpiresAt = Date(System.currentTimeMillis() + refreshLifeTime * DAY_MILLIS)
     val accessToken = JWT.create()
         .withAudience(audience)
-        .withIssuer("${issuer}")
+        .withIssuer(issuer)
         .withClaim("userId", userId)
         .withClaim("deviceId", deviceId)
         .withExpiresAt(accessExpiresAt)
@@ -202,4 +234,17 @@ private suspend fun getUserInfo(principal: JWTPrincipal?): UserInfo{
     val userId = principal!!.payload.getClaim("userId").asString()
     val deviceId = principal.payload.getClaim("deviceId").asString()
     return UserInfo(userId,deviceId)
+}
+
+private suspend inline fun checkInternalServerError(call: ApplicationCall, block: ()->Unit) {
+    try {
+        block()
+    } catch (e: Exception) {
+        call.respond(
+            AuthResponse(
+                status = HttpStatusCode.InternalServerError.value,
+                message = "InternalServerError"
+            )
+        )
+    }
 }

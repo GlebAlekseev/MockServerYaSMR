@@ -1,6 +1,7 @@
 package com.example.plugins
 
 import com.auth0.jwk.JwkProviderBuilder
+import com.example.server.response.AuthResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -30,8 +31,13 @@ fun Application.configureJwt() {
                     }
                 }
             }
-            challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
+            challenge { _, _ ->
+                return@challenge call.respond(
+                    AuthResponse(
+                        status = HttpStatusCode.Unauthorized.value,
+                        message = "Unauthorized: access_token не валиден"
+                    )
+                )
             }
         }
     }
