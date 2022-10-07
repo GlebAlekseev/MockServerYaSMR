@@ -2,6 +2,7 @@ package com.example.data.repository.local
 
 import com.example.domain.entity.UserToken
 import com.example.domain.repository.UserTokenRepository
+import com.mongodb.client.model.Filters
 import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
 
@@ -13,7 +14,7 @@ class UserTokenRepositoryImpl(dataBase: CoroutineDatabase): UserTokenRepository 
         return collectionUserToken.find().toList()
     }
 
-    override suspend fun getUserToken(deviceId: Long): UserToken? {
+    override suspend fun getUserToken(userId: Long, deviceId: Long): UserToken? {
         return collectionUserToken.findOne(UserToken::deviceId eq deviceId)
     }
 
@@ -28,7 +29,11 @@ class UserTokenRepositoryImpl(dataBase: CoroutineDatabase): UserTokenRepository 
         return collectionUserToken.findOne(UserToken::deviceId eq userToken.deviceId)
     }
 
-    override suspend fun removeUserToken(deviceId: Long): UserToken? {
-        return collectionUserToken.findOneAndDelete(UserToken::deviceId eq deviceId)
+    override suspend fun removeUserToken(userId: Long, deviceId: Long): UserToken? {
+        val filter = Filters.and(
+            Filters.eq("userId", userId),
+            Filters.eq("deviceId", deviceId)
+        )
+        return collectionUserToken.findOneAndDelete(filter)
     }
 }

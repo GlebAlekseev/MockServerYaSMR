@@ -35,8 +35,8 @@ object LocalApi {
 
     suspend fun addUserToken(userToken: UserToken): UserToken? = addUserTokenUseCase(userToken)
     suspend fun updateUserToken(userToken: UserToken): UserToken? = updateUserTokenUseCase(userToken)
-    suspend fun removeUserToken(id: Long): UserToken? = removeUserTokenUseCase(id)
-    suspend fun getUserToken(id: Long): UserToken? = getUserTokenUseCase(id)
+    suspend fun removeUserToken(userId: Long, deviceId: Long): UserToken? = removeUserTokenUseCase(userId, deviceId)
+    suspend fun getUserToken(userId: Long, deviceId: Long): UserToken? = getUserTokenUseCase(userId, deviceId)
     suspend fun getUserTokenList(): List<UserToken> = getUserTokenListUseCase()
 
     suspend fun getWithYandex(yandexId: Long): User?{
@@ -53,6 +53,6 @@ object LocalApi {
     private fun getApiDataBase(): CoroutineDatabase {
         KMongo.createClient()
         val client = KMongo.createClient(System.getenv()["MONGO_URL"]!!).coroutine
-        return client.getDatabase("auth")
+        return client.getDatabase("auth_v1")
     }
 }

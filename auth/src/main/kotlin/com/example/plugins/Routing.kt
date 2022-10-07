@@ -3,8 +3,7 @@ package com.example.plugins
 import com.auth0.jwk.*
 import com.auth0.jwt.*
 import com.auth0.jwt.algorithms.*
-import com.example.domain.entity.User
-import com.example.domain.entity.UserToken
+import com.example.domain.entity.*
 import com.example.domain.entity.UserToken.Companion.DAY_MILLIS
 import io.ktor.server.routing.*
 import io.ktor.http.*
@@ -18,15 +17,26 @@ import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import java.util.concurrent.TimeUnit
-import com.example.domain.entity.YandexUser
 import com.example.server.LocalApi
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.content.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
+import kotlinx.serialization.json.JsonBuilder
+import kotlinx.serialization.json.buildJsonObject
+import org.json.simple.JSONObject
 import java.sql.Timestamp
 
+@kotlinx.serialization.Serializable
+data class YandexTokenRequest(
+    val grant_type: String,
+    val code: String
+        )
 fun Application.configureRouting(applicationHttpClient: HttpClient) {
     routing {
         // Применяю OAuth авторизацию к запросам ниже
@@ -37,46 +47,69 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             get("/authorize") {
                 // Редирект на страницу Яндекса
             }
+        }
+        get("/token") {
+            // Получаю код из параметра
+            val code = call.parameters["code"]
 
-            get("/token") {
-                // Получаю токены от Яндекса
-                val principal: OAuthAccessTokenResponse.OAuth2? = call.principal()
-                // Заправшиваю информацию от Яндекса
-                val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
-                    headers {
-                        append(HttpHeaders.Authorization, "Bearer ${principal?.accessToken}")
-                    }
-                }.body()
-                val user = LocalApi.getWithYandex(userInfo.id.toLong())
-                val resultId: Long?
-                if (user == null){
-                    // Регистрация
-                    resultId = LocalApi.addUser(User(
-                        displayName = userInfo.displayName,
-                        yandexId = userInfo.id.toLong(),
-                        accessTokenYandex = principal!!.accessToken,
-                        refreshTokenYandex = principal.refreshToken!!
-                    ))?.id
-                }else{
-                    // Авторизация
-                    resultId = LocalApi.updateUser(user.copy(
-                        displayName = userInfo.displayName,
-                        accessTokenYandex = principal!!.accessToken,
-                        refreshTokenYandex = principal.refreshToken!!
-                    ))?.id
+            val httpResponse = applicationHttpClient.post("https://oauth.yandex.ru/token"){
+                headers {
+                    append(HttpHeaders.Authorization, "Basic ${Base64.getEncoder().encodeToString(
+                        "${System.getenv()["YANDEX_CLIENT_ID"]}:${System.getenv()["YANDEX_CLIENT_SECRET"]}".toByteArray())}")
+                    append(HttpHeaders.ContentType,ContentType.Application.FormUrlEncoded)
                 }
-                // Получение id нового утсройства
-                val deviceId = LocalApi.getNewDeviceIdForUser(resultId!!)
-                val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
-                LocalApi.addUserToken(UserToken(
-                    deviceId = deviceId,
-                    id = resultId,
-                    accessToken = tokenPair.accessToken,
-                    refreshToken = tokenPair.refreshToken,
-                    refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
-                ))
-                call.respond(tokenPair)
+
+                val parameters = Parameters.build {
+                    append("grant_type", "authorization_code")
+                    append("code", code!!)
+                }
+
+                setBody(
+                    TextContent(parameters.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+                )
             }
+
+            if (httpResponse.status != HttpStatusCode.OK){
+                call.respond(HttpStatusCode.BadRequest)
+                return@get
+            }
+            val principal: YandexPrincipal = httpResponse.body()
+
+            // Заправшиваю информацию от Яндекса
+            val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
+                }
+            }.body()
+            val user = LocalApi.getWithYandex(userInfo.id.toLong())
+            val resultId: Long?
+            if (user == null){
+                // Регистрация
+                resultId = LocalApi.addUser(User(
+                    displayName = userInfo.displayName,
+                    yandexId = userInfo.id.toLong(),
+                    accessTokenYandex = principal.accessToken!!,
+                    refreshTokenYandex = principal.refreshToken!!
+                ))?.id
+            }else{
+                // Авторизация
+                resultId = LocalApi.updateUser(user.copy(
+                    displayName = userInfo.displayName,
+                    accessTokenYandex = principal.accessToken!!,
+                    refreshTokenYandex = principal.refreshToken!!
+                ))?.id
+            }
+            // Получение id нового утсройства
+            val deviceId = LocalApi.getNewDeviceIdForUser(resultId!!)
+            val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
+            LocalApi.addUserToken(UserToken(
+                deviceId = deviceId,
+                id = resultId,
+                accessToken = tokenPair.accessToken,
+                refreshToken = tokenPair.refreshToken,
+                refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
+            ))
+            call.respond(tokenPair)
         }
 
         post("/refresh") {
@@ -103,6 +136,16 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 call.respond(HttpStatusCode.BadRequest)
             }
         }
+
+        authenticate("auth-jwt") {
+            post("/logout") {
+                val principal = call.principal<JWTPrincipal>()
+                val (userId,deviceId) = getUserInfo(principal)
+                LocalApi.removeUserToken(userId.toLong(),deviceId.toLong())
+                call.respond(HttpStatusCode.OK)
+            }
+        }
+
         // Делаю папку certs статикой
         static(".well-known") {
             staticRootFolder = File("certs")
@@ -152,3 +195,11 @@ data class TokenPair(val accessToken: String, val refreshToken: String, val expi
 
 @kotlinx.serialization.Serializable
 data class RefreshToken(val refresh_token: String)
+
+data class UserInfo(val userId: String,val deviceId: String)
+
+private suspend fun getUserInfo(principal: JWTPrincipal?): UserInfo{
+    val userId = principal!!.payload.getClaim("userId").asString()
+    val deviceId = principal.payload.getClaim("deviceId").asString()
+    return UserInfo(userId,deviceId)
+}
