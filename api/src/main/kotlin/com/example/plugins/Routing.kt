@@ -3,7 +3,6 @@ package com.example.plugins
 import com.example.domain.entity.TodoItem
 import com.example.domain.entity.TodoRevision
 import com.example.server.LocalApi
-import com.example.server.response.TodoItemResponse
 import com.example.server.response.TodoListResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -57,18 +56,18 @@ fun Route.customRouting() {
                 val principal = call.principal<JWTPrincipal>()
                 val (userId,deviceId,todoRevision) = getUserInfo(principal)
                 val id = call.parameters["id"] ?: return@get call.respond(
-                    TodoItemResponse(
+                    TodoListResponse(
                         status = HttpStatusCode.BadRequest.value,
                         message = "Missing id"
                     )
                 )
                 val response = LocalApi.getTodoItem(userId,id) ?: return@get call.respond(
-                    TodoItemResponse(
+                    TodoListResponse(
                         status = HttpStatusCode.NotFound.value,
                         message = "No todo with id $id"
                     )
                 )
-                call.respond(TodoItemResponse(status = HttpStatusCode.OK.value, item = response, revision = todoRevision.revision))
+                call.respond(TodoListResponse(status = HttpStatusCode.OK.value, list = listOf(response), revision = todoRevision.revision))
             }
             // Добавить элемент
             post {
@@ -77,7 +76,7 @@ fun Route.customRouting() {
                 val newTodoRevision = LocalApi.setTodoRevision(TodoRevision(userId,deviceId,todoRevision.revision + 1))
                 val item = call.receive<TodoItem>()
                 val response = LocalApi.addTodoItem(userId,item)
-                call.respond(TodoItemResponse(item = response, revision = newTodoRevision!!.revision))
+                call.respond(TodoListResponse(list = if (response == null) emptyList() else listOf(response), revision = newTodoRevision!!.revision))
             }
             // Обновить элемент
             put("{id?}") {
@@ -86,14 +85,14 @@ fun Route.customRouting() {
                 val newTodoRevision = LocalApi.setTodoRevision(TodoRevision(userId,deviceId,todoRevision.revision + 1))
 
                 val id = call.parameters["id"] ?: return@put call.respond(
-                    TodoItemResponse(
+                    TodoListResponse(
                         status = HttpStatusCode.BadRequest.value,
                         message = "Missing id"
                     )
                 )
                 val item = call.receive<TodoItem>().copy(id = id)
                 val response = LocalApi.updateTodoItem(userId,item)
-                call.respond(TodoItemResponse(item = response, revision = newTodoRevision!!.revision))
+                call.respond(TodoListResponse(list = if (response == null) emptyList() else listOf(response), revision = newTodoRevision!!.revision))
             }
             // Удалить элемент
             delete("{id?}") {
@@ -101,13 +100,13 @@ fun Route.customRouting() {
                 val (userId,deviceId,todoRevision) = getUserInfo(principal)
                 val newTodoRevision = LocalApi.setTodoRevision(TodoRevision(userId,deviceId,todoRevision.revision + 1))
                 val id = call.parameters["id"] ?: return@delete call.respond(
-                    TodoItemResponse(
+                    TodoListResponse(
                         status = HttpStatusCode.BadRequest.value,
                         message = "Missing id"
                     )
                 )
                 val response = LocalApi.removeTodoItem(userId,id)
-                call.respond(TodoItemResponse(item = response, revision = newTodoRevision!!.revision))
+                call.respond(TodoListResponse(list = if (response == null) emptyList() else listOf(response), revision = newTodoRevision!!.revision))
             }
         }
     }

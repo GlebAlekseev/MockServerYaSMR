@@ -12,7 +12,7 @@ fun Application.configureOAuthYandex(applicationHttpClient: HttpClient) {
         issuer = System.getenv()["YANDEX_CALLBACK"]!!
     }
     install(Authentication) {
-        oauth("auth-oauth-google") {
+        oauth("auth-oauth-yandex") {
             urlProvider = { issuer }
             providerLookup = {
                 OAuthServerSettings.OAuth2ServerSettings(

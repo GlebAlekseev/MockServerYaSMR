@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TodoListResponse(
     val status: Int = HttpStatusCode.OK.value,
-    val list: List<TodoItem>? = null,
+    val list: List<TodoItem>? = emptyList(),
     val revision: Long = 0,
     val message: String = "",
 )

@@ -40,7 +40,7 @@ data class YandexTokenRequest(
 fun Application.configureRouting(applicationHttpClient: HttpClient) {
     routing {
         // Применяю OAuth авторизацию к запросам ниже
-        authenticate("auth-oauth-google") {
+        authenticate("auth-oauth-yandex") {
             // Используется клиентом, чтобы зарегистрироваться/войти
             // Далее он будет жить на jwt
             // Если jwt иссякнет, то опять /login
