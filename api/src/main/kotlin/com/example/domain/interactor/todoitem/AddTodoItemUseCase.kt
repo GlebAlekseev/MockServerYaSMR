@@ -4,5 +4,5 @@ import com.example.domain.entity.TodoItem
 import com.example.domain.repository.TodoItemRepository
 
 class AddTodoItemUseCase(private val todoItemRepository: TodoItemRepository) {
-    suspend operator fun invoke(userId:String, todoItem: TodoItem): TodoItem? = todoItemRepository.addTodoItem(userId,todoItem)
+    suspend operator fun invoke(userId: Long, todoItem: TodoItem): TodoItem? = todoItemRepository.addTodoItem(userId,todoItem)
 }

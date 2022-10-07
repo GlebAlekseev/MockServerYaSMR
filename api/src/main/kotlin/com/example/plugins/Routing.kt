@@ -67,7 +67,7 @@ fun Route.customRouting() {
                             message = "BadRequest: id не предоставлен"
                         )
                     )
-                    val todoItem = LocalApi.getTodoItem(userId, id) ?: return@get call.respond(
+                    val todoItem = LocalApi.getTodoItem(userId, id.toLong()) ?: return@get call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.NotFound.value,
                             message = "NotFound: Элемент с id: $id не существует"
@@ -140,7 +140,7 @@ fun Route.customRouting() {
                             message = "BadRequest: не предоставлен элемент TodoItem"
                         )
                     )
-                    val updatedTodoItem = LocalApi.updateTodoItem(userId, todoItem)
+                    val updatedTodoItem = LocalApi.updateTodoItem(userId, todoItem.copy(id = id.toLong()))
                     updatedTodoItem ?: return@put call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.NotFound.value,
@@ -177,7 +177,7 @@ fun Route.customRouting() {
                         )
                     )
 
-                    val deletedTodoItem = LocalApi.removeTodoItem(userId, id)
+                    val deletedTodoItem = LocalApi.removeTodoItem(userId, id.toLong())
                     deletedTodoItem ?: return@delete call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.NotFound.value,
@@ -196,19 +196,19 @@ fun Route.customRouting() {
     }
 }
 
-private suspend fun getTodoRevision(userId: String, deviceId:String): TodoRevision {
+private suspend fun getTodoRevision(userId: Long, deviceId: Long): TodoRevision {
     var todoRevision = LocalApi.getTodoRevision(userId, deviceId)
     if (todoRevision == null) {
         todoRevision = LocalApi.setTodoRevision(TodoRevision(userId, deviceId, 1))
     }
     return todoRevision!!
 }
-data class UserInfo(val userId: String,val deviceId: String, val todoRevision: TodoRevision)
+data class UserInfo(val userId: Long,val deviceId: Long, val todoRevision: TodoRevision)
 
 private suspend fun getUserInfo(call: ApplicationCall): UserInfo {
     val principal = call.principal<JWTPrincipal>()
-    val userId = principal!!.payload.getClaim("userId").asString()
-    val deviceId = principal.payload.getClaim("deviceId").asString()
+    val userId = principal!!.payload.getClaim("userId").asString().toLong()
+    val deviceId = principal.payload.getClaim("deviceId").asString().toLong()
     val todoRevision = getTodoRevision(userId, deviceId)
     return UserInfo(userId, deviceId, todoRevision)
 }
@@ -219,8 +219,6 @@ private suspend inline fun checkInternalServerError(call: ApplicationCall, block
         call.respond(
             TodoListResponse(
                 status = HttpStatusCode.InternalServerError.value,
-                list = emptyList(),
-                revision = 0,
                 message = "InternalServerError"
             )
         )

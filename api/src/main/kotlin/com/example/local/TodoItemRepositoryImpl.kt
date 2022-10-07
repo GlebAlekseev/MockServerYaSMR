@@ -8,55 +8,59 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.awaitFirst
 import org.litote.kmongo.coroutine.CoroutineDatabase
+import org.litote.kmongo.coroutine.insertOne
 import org.litote.kmongo.eq
 
-@OptIn(DelicateCoroutinesApi::class)
-class TodoItemRepositoryImpl(private val dataBase: CoroutineDatabase) : TodoItemRepository {
+class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
     private val collectionTodoItem = dataBase.getCollection<TodoItem>()
-    override suspend fun getTodoList(userId:String): List<TodoItem> {
+    override suspend fun getTodoList(userId: Long): List<TodoItem> {
         return collectionTodoItem.find(TodoItem::userId eq userId).toList()
     }
 
-    override suspend fun updateTodoList(userId:String, list: List<TodoItem>): List<TodoItem> {
-        collectionTodoItem.deleteMany(TodoItem::userId eq userId)
-        var id = 1
-        list.forEach {item->
-            collectionTodoItem.insertOne(item.copy(userId=userId,id = id.toString()))
-            id++
+    override suspend fun updateTodoList(userId: Long, list: List<TodoItem>): List<TodoItem> {
+        var maxId = collectionTodoItem.find(TodoItem::userId eq userId).toList().maxBy { it.id }.id
+        list.forEach {
+            maxId++
+            val filter = Filters.and(
+                Filters.eq("userId", userId),
+                Filters.eq("id", it.id)
+            )
+            collectionTodoItem.deleteOne(filter)
+            collectionTodoItem.insertOne(it.copy(id = maxId))
         }
         return collectionTodoItem.find(TodoItem::userId eq userId).toList()
     }
 
-    override suspend fun getTodoItem(userId: String, id: String): TodoItem? {
+    override suspend fun getTodoItem(userId: Long, id: Long): TodoItem? {
         val filter = Filters.and(
-            Filters.eq("userId",userId),
-            Filters.eq("id",id)
+            Filters.eq("userId", userId),
+            Filters.eq("id", id)
         )
         return collectionTodoItem.findOne(filter)
     }
 
-    override suspend fun removeTodoItem(userId:String, id: String): TodoItem? {
+    override suspend fun removeTodoItem(userId: Long, id: Long): TodoItem? {
         val filter = Filters.and(
-            Filters.eq("userId",userId),
-            Filters.eq("id",id)
+            Filters.eq("userId", userId),
+            Filters.eq("id", id)
         )
         return collectionTodoItem.findOneAndDelete(filter)
     }
 
-    override suspend fun addTodoItem(userId:String, todoItem: TodoItem): TodoItem? {
+    override suspend fun addTodoItem(userId: Long, todoItem: TodoItem): TodoItem? {
         val maxId = collectionTodoItem.find(TodoItem::userId eq userId).toList().maxBy { it.id }.id
-        collectionTodoItem.insertOne(todoItem.copy(userId=userId, id = (maxId.toInt()+1).toString()))
+        collectionTodoItem.insertOne(todoItem.copy(userId = userId, id = maxId + 1))
         val filter = Filters.and(
-            Filters.eq("userId",userId),
-            Filters.eq("id",todoItem.id)
+            Filters.eq("userId", userId),
+            Filters.eq("id", todoItem.id)
         )
         return collectionTodoItem.findOne(filter)
     }
 
-    override suspend fun updateTodoItem(userId:String, todoItem: TodoItem): TodoItem? {
+    override suspend fun updateTodoItem(userId: Long, todoItem: TodoItem): TodoItem? {
         val filter = Filters.and(
-            Filters.eq("userId",userId),
-            Filters.eq("id",todoItem.id)
+            Filters.eq("userId", userId),
+            Filters.eq("id", todoItem.id)
         )
         collectionTodoItem.updateOne(filter, todoItem)
         return collectionTodoItem.findOne(filter)

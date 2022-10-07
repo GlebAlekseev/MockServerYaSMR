@@ -4,6 +4,6 @@ import com.example.domain.entity.TodoItem
 import com.example.domain.entity.TodoRevision
 
 interface TodoRevisionRepository {
-    suspend fun getTodoRevision(userId: String, deviceId: String): TodoRevision?
+    suspend fun getTodoRevision(userId: Long, deviceId: Long): TodoRevision?
     suspend fun setTodoRevision(todoRevision: TodoRevision): TodoRevision?
 }

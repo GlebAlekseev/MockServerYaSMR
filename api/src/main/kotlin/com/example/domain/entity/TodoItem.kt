@@ -1,27 +1,21 @@
 package com.example.domain.entity
 
-import com.example.domain.entity.serializer.TimeStampAsLong
 import kotlinx.serialization.Serializable
-import java.sql.Timestamp
 
 @Serializable
 data class TodoItem(
-    val userId: String,
-    val id: String = UNDEFINED,
+    val userId: Long,
+    val id: Long,
     val text: String,
     val importance: Importance,
-    @Serializable(with = TimeStampAsLong::class)
-    val deadline: Timestamp,
+    val deadline: Long?,
     val done: Boolean,
     val color: String,
-    @Serializable(with = TimeStampAsLong::class)
-    val createdAt: Timestamp,
-    @Serializable(with = TimeStampAsLong::class)
-    val changedAt: Timestamp,
-    val lastUpdatedBy: Int
+    val createdAt: Long,
+    val changedAt: Long?,
+    val lastUpdatedBy: Long
 ) {
     companion object {
-        const val UNDEFINED = "-1"
         @Serializable
         enum class Importance {
             LOW,
