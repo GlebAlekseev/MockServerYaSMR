@@ -9,5 +9,5 @@ data class TodoListResponse(
     val status: Int = HttpStatusCode.OK.value,
     val list: List<TodoItem>? = emptyList(),
     val revision: Long = 0,
-    val message: String = "",
+    val message: String = "OK",
 )

@@ -1,6 +1,7 @@
 package com.example.plugins
 
 import com.auth0.jwk.JwkProviderBuilder
+import com.example.server.response.TodoListResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -9,7 +10,7 @@ import io.ktor.server.response.*
 import java.util.concurrent.TimeUnit
 
 fun Application.configureJwt() {
-    var issuer = environment.config.property("jwt.issuer").getString()
+    val issuer = environment.config.property("jwt.issuer").getString()
 
     val jwkProvider = JwkProviderBuilder(issuer)
         .cached(10, 24, TimeUnit.HOURS)
@@ -30,8 +31,13 @@ fun Application.configureJwt() {
                     }
                 }
             }
-            challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
+            challenge { _, _ ->
+                call.respond(
+                    TodoListResponse(
+                        status = HttpStatusCode.Unauthorized.value,
+                        message = "Unauthorized: access_token не валиден"
+                    )
+                )
             }
         }
     }
