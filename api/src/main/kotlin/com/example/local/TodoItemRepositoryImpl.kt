@@ -1,6 +1,7 @@
 package com.example.data.repository.local
 
 import com.example.domain.entity.TodoItem
+import com.example.domain.entity.TodoItem.Companion.UNDEFINED
 import com.example.domain.repository.TodoItemRepository
 import com.mongodb.client.model.Filters
 import org.litote.kmongo.coroutine.CoroutineDatabase
@@ -13,15 +14,11 @@ class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
     }
 
     override suspend fun updateTodoList(userId: Long, list: List<TodoItem>): List<TodoItem> {
-        var maxId = collectionTodoItem.find(TodoItem::userId eq userId).toList().maxBy { it.id }.id
+        var id = 1L
+        collectionTodoItem.deleteMany(TodoItem::userId eq userId)
         list.forEach {
-            maxId++
-            val filter = Filters.and(
-                Filters.eq("userId", userId),
-                Filters.eq("id", it.id)
-            )
-            collectionTodoItem.deleteOne(filter)
-            collectionTodoItem.insertOne(it.copy(id = maxId))
+            collectionTodoItem.insertOne(it.copy(id = id))
+            id++
         }
         return collectionTodoItem.find(TodoItem::userId eq userId).toList()
     }

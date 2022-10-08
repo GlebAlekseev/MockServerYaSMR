@@ -31,12 +31,12 @@ fun Route.customRouting() {
             // Получить список
             get {
                 checkInternalServerError(call) {
-                    val (userId, _, todoRevision) = getUserInfo(call)
+                    val (userId, _, todoRevisionServer) = getUserInfo(call)
                     val todoList = LocalApi.getTodoList(userId)
                     call.respond(
                         TodoListResponse(
                             list = todoList,
-                            revision = todoRevision.revision,
+                            revision = todoRevisionServer.revision,
                         )
                     )
                 }
@@ -44,9 +44,18 @@ fun Route.customRouting() {
             // Обновить список
             patch {
                 checkInternalServerError(call) {
-                    val (userId, deviceId, todoRevision) = getUserInfo(call)
+                    val (userId, deviceId, todoRevisionServer) = getUserInfo(call)
+                    val lastKnownRevision = call.request.header("X-Last-Known-Revision")!!.toLong()
+                    if (todoRevisionServer.revision != lastKnownRevision){
+                        return@patch call.respond(
+                            TodoListResponse(
+                                status = HttpStatusCode.BadRequest.value,
+                                message = "BadRequest: Ревизия не совпадает"
+                            )
+                        )
+                    }
                     val incrementedTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, todoRevision.revision + 1))!!
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val receivedTodoList = call.receive<List<TodoItem>>()
                     val todoList = LocalApi.updateTodoList(userId, receivedTodoList)
                     call.respond(
@@ -60,7 +69,7 @@ fun Route.customRouting() {
             // Получить элемент
             get("{id?}") {
                 checkInternalServerError(call) {
-                    val (userId, _, todoRevision) = getUserInfo(call)
+                    val (userId, _, todoRevisionServer) = getUserInfo(call)
                     val id = call.parameters["id"] ?: return@get call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.BadRequest.value,
@@ -76,7 +85,7 @@ fun Route.customRouting() {
                     call.respond(
                         TodoListResponse(
                             list = listOf(todoItem),
-                            revision = todoRevision.revision
+                            revision = todoRevisionServer.revision
                         )
                     )
                 }
@@ -84,9 +93,9 @@ fun Route.customRouting() {
             // Добавить элемент
             post {
                 checkInternalServerError(call) {
-                    val (userId, deviceId, todoRevision) = getUserInfo(call)
-                    val lastRevision = LocalApi.getTodoRevision(userId, deviceId)
-                    if (todoRevision != lastRevision){
+                    val (userId, deviceId, todoRevisionServer) = getUserInfo(call)
+                    val lastKnownRevision = call.request.header("X-Last-Known-Revision")!!.toLong()
+                    if (todoRevisionServer.revision != lastKnownRevision){
                         return@post call.respond(
                             TodoListResponse(
                                 status = HttpStatusCode.BadRequest.value,
@@ -95,7 +104,7 @@ fun Route.customRouting() {
                         )
                     }
                     val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, todoRevision.revision + 1))!!
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val todoItem = call.receiveNullable<TodoItem>()
                     todoItem ?: return@post call.respond(
                         TodoListResponse(
@@ -115,9 +124,9 @@ fun Route.customRouting() {
             // Обновить элемент
             put("{id?}") {
                 checkInternalServerError(call) {
-                    val (userId, deviceId, todoRevision) = getUserInfo(call)
-                    val lastRevision = LocalApi.getTodoRevision(userId, deviceId)
-                    if (todoRevision != lastRevision){
+                    val (userId, deviceId, todoRevisionServer) = getUserInfo(call)
+                    val lastKnownRevision = call.request.header("X-Last-Known-Revision")!!.toLong()
+                    if (todoRevisionServer.revision != lastKnownRevision){
                         return@put call.respond(
                             TodoListResponse(
                                 status = HttpStatusCode.BadRequest.value,
@@ -126,7 +135,7 @@ fun Route.customRouting() {
                         )
                     }
                     val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, todoRevision.revision + 1))!!
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val id = call.parameters["id"] ?: return@put call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.BadRequest.value,
@@ -158,9 +167,9 @@ fun Route.customRouting() {
             // Удалить элемент
             delete("{id?}") {
                 checkInternalServerError(call) {
-                    val (userId, deviceId, todoRevision) = getUserInfo(call)
-                    val lastRevision = LocalApi.getTodoRevision(userId, deviceId)
-                    if (todoRevision != lastRevision){
+                    val (userId, deviceId, todoRevisionServer) = getUserInfo(call)
+                    val lastKnownRevision = call.request.header("X-Last-Known-Revision")!!.toLong()
+                    if (todoRevisionServer.revision != lastKnownRevision){
                         return@delete call.respond(
                             TodoListResponse(
                                 status = HttpStatusCode.BadRequest.value,
@@ -169,7 +178,7 @@ fun Route.customRouting() {
                         )
                     }
                     val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, todoRevision.revision + 1))!!
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val id = call.parameters["id"] ?: return@delete call.respond(
                         TodoListResponse(
                             status = HttpStatusCode.BadRequest.value,
@@ -209,8 +218,8 @@ private suspend fun getUserInfo(call: ApplicationCall): UserInfo {
     val principal = call.principal<JWTPrincipal>()
     val userId = principal!!.payload.getClaim("userId").asString().toLong()
     val deviceId = principal.payload.getClaim("deviceId").asString().toLong()
-    val todoRevision = getTodoRevision(userId, deviceId)
-    return UserInfo(userId, deviceId, todoRevision)
+    val todoRevisionServer = getTodoRevision(userId, deviceId)
+    return UserInfo(userId, deviceId, todoRevisionServer)
 }
 private suspend inline fun checkInternalServerError(call: ApplicationCall, block: ()->Unit) {
     try {

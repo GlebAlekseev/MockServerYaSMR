@@ -16,6 +16,7 @@ data class TodoItem(
     val lastUpdatedBy: Long
 ) {
     companion object {
+        const val UNDEFINED = 0L
         @Serializable
         enum class Importance {
             LOW,

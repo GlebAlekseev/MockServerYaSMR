@@ -8,8 +8,6 @@ services:
     environment:
       - JWT_ISSUER=http://auth:3001/
       - JWT_AUDIENCE=https://localhost/api
-#      - YANDEX_CALLBACK=https://192.168.0.102/auth/callback
-#      - YANDEX_CALLBACK=https://192.168.0.102/auth/callback
       - YANDEX_CALLBACK=com.glebalekseevjk.yasmrhomework://redirect2callback
     volumes:
       - ./auth/cache:/appbuild/cache
