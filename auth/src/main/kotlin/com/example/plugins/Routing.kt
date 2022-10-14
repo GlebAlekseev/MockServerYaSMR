@@ -43,8 +43,8 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             checkInternalServerError(call) {
                 // Получаю код из параметра
                 val code = call.parameters["code"] ?: return@get call.respond(
+                    HttpStatusCode.BadRequest,
                     AuthResponse(
-                        status = HttpStatusCode.BadRequest.value,
                         message = "BadRequest: id не предоставлен"
                     )
                 )
@@ -68,9 +68,11 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                     )
                 }
                 if (httpResponse.status != HttpStatusCode.OK) {
-                    AuthResponse(
-                        status = HttpStatusCode.BadRequest.value,
-                        message = "BadRequest: code не валиден"
+                    return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        AuthResponse(
+                            message = "BadRequest: code не валиден"
+                        )
                     )
                 }
 
@@ -128,15 +130,15 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
             checkInternalServerError(call) {
                 val oldRefreshToken = call.receiveNullable<RefreshToken>()
                 val refreshToken = oldRefreshToken?.refresh_token ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
                     AuthResponse(
-                        status = HttpStatusCode.BadRequest.value,
                         message = "BadRequest: refresh_token не предоставлен"
                     )
                 )
                 val userToken = LocalApi.getUserTokenWithRefreshToken(refreshToken)
                 userToken ?: return@post call.respond(
+                    HttpStatusCode.NotFound,
                     AuthResponse(
-                        status = HttpStatusCode.NotFound.value,
                         message = "NotFound: Элемент с указанным refresh_token не существует"
                     )
                 )
@@ -159,8 +161,8 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                     )
                 } else {
                     return@post call.respond(
+                        HttpStatusCode.BadRequest,
                         AuthResponse(
-                            status = HttpStatusCode.BadRequest.value,
                             message = "BadRequest: токен просрочен"
                         )
                     )
@@ -241,8 +243,8 @@ private suspend inline fun checkInternalServerError(call: ApplicationCall, block
         block()
     } catch (e: Exception) {
         call.respond(
+            HttpStatusCode.InternalServerError,
             AuthResponse(
-                status = HttpStatusCode.InternalServerError.value,
                 message = "InternalServerError"
             )
         )

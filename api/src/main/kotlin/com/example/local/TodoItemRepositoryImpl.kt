@@ -5,6 +5,7 @@ import com.example.domain.entity.TodoItem.Companion.UNDEFINED
 import com.example.domain.repository.TodoItemRepository
 import com.mongodb.client.model.Filters
 import org.litote.kmongo.coroutine.CoroutineDatabase
+import org.litote.kmongo.deleteOne
 import org.litote.kmongo.eq
 
 class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
@@ -14,11 +15,13 @@ class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
     }
 
     override suspend fun updateTodoList(userId: Long, list: List<TodoItem>): List<TodoItem> {
-        var id = 1L
-        collectionTodoItem.deleteMany(TodoItem::userId eq userId)
         list.forEach {
-            collectionTodoItem.insertOne(it.copy(id = id))
-            id++
+            val filter = Filters.and(
+                Filters.eq("userId", userId),
+                Filters.eq("id", it.id)
+            )
+            collectionTodoItem.deleteOne(filter)
+            collectionTodoItem.insertOne(it.copy())
         }
         return collectionTodoItem.find(TodoItem::userId eq userId).toList()
     }

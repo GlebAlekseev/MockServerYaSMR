@@ -34,8 +34,8 @@ services:
       - api_db
     networks:
       - yasmr-backend-network
-    logging:
-      driver: none
+#    logging:
+#      driver: none
 
   auth_db:
     image: mongo:latest

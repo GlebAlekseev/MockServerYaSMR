@@ -17,8 +17,7 @@ val applicationHttpClient = HttpClient(CIO) {
 }
 fun Application.module(){
     checkEnv()
-    configureJwt()
-    configureOAuthYandex(applicationHttpClient)
+    configureAuthentication(applicationHttpClient)
     configureRouting(applicationHttpClient)
     configureSerialization()
 }
