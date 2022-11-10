@@ -1,32 +1,35 @@
 package com.example.plugins
 
-import com.auth0.jwk.*
-import com.auth0.jwt.*
-import com.auth0.jwt.algorithms.*
-import com.example.domain.entity.*
+import com.auth0.jwk.JwkProviderBuilder
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
+import com.example.domain.entity.User
+import com.example.domain.entity.UserToken
 import com.example.domain.entity.UserToken.Companion.DAY_MILLIS
-import io.ktor.server.routing.*
+import com.example.domain.entity.YandexPrincipal
+import com.example.domain.entity.YandexUser
+import com.example.server.LocalApi
+import com.example.server.response.AuthResponse
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.http.content.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import java.io.File
+import java.io.IOException
 import java.security.KeyFactory
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import java.util.concurrent.TimeUnit
-import com.example.server.LocalApi
-import com.example.server.response.AuthResponse
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.http.content.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
-import io.ktor.server.request.*
-import java.io.IOException
 
 fun Application.configureRouting(applicationHttpClient: HttpClient) {
     routing {
@@ -86,26 +89,26 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 }.body()
                 val user = LocalApi.getWithYandex(userInfo.id.toLong())
                 val resultId: Long =
-                if (user == null) {
-                    // Регистрация
-                    LocalApi.addUser(
-                        User(
-                            displayName = userInfo.displayName,
-                            yandexId = userInfo.id.toLong(),
-                            accessTokenYandex = principal.accessToken,
-                            refreshTokenYandex = principal.refreshToken
-                        )
-                    )!!.id
-                } else {
-                    // Авторизация
-                    LocalApi.updateUser(
-                        user.copy(
-                            displayName = userInfo.displayName,
-                            accessTokenYandex = principal.accessToken,
-                            refreshTokenYandex = principal.refreshToken
-                        )
-                    )!!.id
-                }
+                    if (user == null) {
+                        // Регистрация
+                        LocalApi.addUser(
+                            User(
+                                displayName = userInfo.displayName,
+                                yandexId = userInfo.id.toLong(),
+                                accessTokenYandex = principal.accessToken,
+                                refreshTokenYandex = principal.refreshToken
+                            )
+                        )!!.id
+                    } else {
+                        // Авторизация
+                        LocalApi.updateUser(
+                            user.copy(
+                                displayName = userInfo.displayName,
+                                accessTokenYandex = principal.accessToken,
+                                refreshTokenYandex = principal.refreshToken
+                            )
+                        )!!.id
+                    }
                 // Получение id нового утсройства
                 val deviceId = LocalApi.getNewDeviceIdForUser(resultId)
                 val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
@@ -172,8 +175,8 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
         authenticate("auth-jwt") {
             post("/logout") {
                 val principal = call.principal<JWTPrincipal>()
-                val (userId,deviceId) = getUserInfo(principal)
-                LocalApi.removeUserToken(userId.toLong(),deviceId.toLong())!!
+                val (userId, deviceId) = getUserInfo(principal)
+                LocalApi.removeUserToken(userId.toLong(), deviceId.toLong())!!
                 return@post call.respond(
                     AuthResponse()
                 )
@@ -212,7 +215,7 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     val publicKey = jwkProvider.get("test_key").publicKey
     val keySpecPKCS8 = PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyString))
     val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
-    val accessExpiresAt = Date(System.currentTimeMillis() + 1000*60*accessLifeTime)
+    val accessExpiresAt = Date(System.currentTimeMillis() + 1000 * 60 * accessLifeTime)
     val refreshExpiresAt = Date(System.currentTimeMillis() + refreshLifeTime * DAY_MILLIS)
     val accessToken = JWT.create()
         .withAudience(audience)
@@ -224,21 +227,22 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     val refreshToken = UUID.randomUUID().toString()
     return TokenPair(accessToken, refreshToken, refreshExpiresAt.time)
 }
+
 @kotlinx.serialization.Serializable
 data class TokenPair(val accessToken: String, val refreshToken: String, val expiresAt: Long)
 
 @kotlinx.serialization.Serializable
 data class RefreshToken(val refresh_token: String)
 
-data class UserInfo(val userId: String,val deviceId: String)
+data class UserInfo(val userId: String, val deviceId: String)
 
-private suspend fun getUserInfo(principal: JWTPrincipal?): UserInfo{
+private suspend fun getUserInfo(principal: JWTPrincipal?): UserInfo {
     val userId = principal!!.payload.getClaim("userId").asString()
     val deviceId = principal.payload.getClaim("deviceId").asString()
-    return UserInfo(userId,deviceId)
+    return UserInfo(userId, deviceId)
 }
 
-private suspend inline fun checkInternalServerError(call: ApplicationCall, block: ()->Unit) {
+private suspend inline fun checkInternalServerError(call: ApplicationCall, block: () -> Unit) {
     try {
         block()
     } catch (e: Exception) {

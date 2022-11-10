@@ -7,8 +7,8 @@ data class User(
     val yandexId: Long,
     val accessTokenYandex: String,
     val refreshTokenYandex: String,
-){
-    companion object{
+) {
+    companion object {
         const val UNDEFINED = 0L
     }
 }

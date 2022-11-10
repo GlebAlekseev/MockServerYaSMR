@@ -20,8 +20,8 @@ fun Application.configureAuthentication(applicationHttpClient: HttpClient) {
         issuerOAuth = it
     }
 
-    install(Authentication){
-        configureOAuthYandex(applicationHttpClient,issuerOAuth)
-        configureJwt(issuerJWT,jwkProvider)
+    install(Authentication) {
+        configureOAuthYandex(applicationHttpClient, issuerOAuth)
+        configureJwt(issuerJWT, jwkProvider)
     }
 }

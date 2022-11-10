@@ -7,7 +7,7 @@ import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
 
 
-class UserTokenRepositoryImpl(dataBase: CoroutineDatabase): UserTokenRepository {
+class UserTokenRepositoryImpl(dataBase: CoroutineDatabase) : UserTokenRepository {
     private val collectionUserToken = dataBase.getCollection<UserToken>()
 
     override suspend fun getUserTokenList(): List<UserToken> {

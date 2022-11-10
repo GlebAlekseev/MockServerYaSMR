@@ -7,7 +7,7 @@ import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
 
 
-class UserRepositoryImpl(dataBase: CoroutineDatabase): UserRepository {
+class UserRepositoryImpl(dataBase: CoroutineDatabase) : UserRepository {
     private val collectionUser = dataBase.getCollection<User>()
 
     override suspend fun getUserList(): List<User> {
@@ -27,7 +27,7 @@ class UserRepositoryImpl(dataBase: CoroutineDatabase): UserRepository {
     }
 
     override suspend fun updateUser(user: User): User? {
-        collectionUser.updateOne(User::id eq user.id,user)
+        collectionUser.updateOne(User::id eq user.id, user)
         return collectionUser.findOne(User::id eq user.id)
     }
 

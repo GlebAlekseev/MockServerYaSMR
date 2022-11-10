@@ -6,8 +6,9 @@ import com.example.domain.entity.User
 import com.example.domain.entity.UserToken
 import com.example.domain.interactor.user.*
 import com.example.domain.interactor.usertoken.*
-import org.litote.kmongo.reactivestreams.*
-import org.litote.kmongo.coroutine.*
+import org.litote.kmongo.coroutine.CoroutineDatabase
+import org.litote.kmongo.coroutine.coroutine
+import org.litote.kmongo.reactivestreams.KMongo
 
 object LocalApi {
     private val database = getApiDataBase()
@@ -38,15 +39,17 @@ object LocalApi {
     suspend fun getUserToken(userId: Long, deviceId: Long): UserToken? = getUserTokenUseCase(userId, deviceId)
     suspend fun getUserTokenList(): List<UserToken> = getUserTokenListUseCase()
 
-    suspend fun getWithYandex(yandexId: Long): User?{
+    suspend fun getWithYandex(yandexId: Long): User? {
         return getUserList().lastOrNull { it.yandexId == yandexId }
     }
-    suspend fun getNewDeviceIdForUser(id: Long): Long{
-        return getUserTokenList().filter { it.id == id }.maxOfOrNull { it.deviceId }.let { if (it != null) it + 1 else 1 }
+
+    suspend fun getNewDeviceIdForUser(id: Long): Long {
+        return getUserTokenList().filter { it.id == id }.maxOfOrNull { it.deviceId }
+            .let { if (it != null) it + 1 else 1 }
     }
 
     suspend fun getUserTokenWithRefreshToken(refreshToken: String): UserToken? {
-         return getUserTokenList().lastOrNull { it.refreshToken == refreshToken }
+        return getUserTokenList().lastOrNull { it.refreshToken == refreshToken }
     }
 
     private fun getApiDataBase(): CoroutineDatabase {
