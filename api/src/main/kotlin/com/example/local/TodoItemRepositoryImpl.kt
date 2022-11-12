@@ -43,7 +43,12 @@ class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
     }
 
     override suspend fun addTodoItem(userId: Long, todoItem: TodoItem): TodoItem? {
-        val maxId = collectionTodoItem.find(TodoItem::userId eq userId).toList().maxBy { it.id }.id
+        val count = collectionTodoItem.countDocuments()
+        val maxId = if (count != 0L) {
+            collectionTodoItem.find(TodoItem::userId eq userId).toList().maxBy { it.id }.id
+        } else {
+            0
+        }
         collectionTodoItem.insertOne(todoItem.copy(userId = userId, id = maxId + 1))
         val filter = Filters.and(
             Filters.eq("userId", userId),

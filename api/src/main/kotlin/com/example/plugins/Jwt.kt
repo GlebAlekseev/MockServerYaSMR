@@ -24,7 +24,7 @@ fun Application.configureJwt() {
             }
             validate { credential ->
                 with(credential.payload) {
-                    if (getClaim("userId").asString() != "" && getClaim("deviceId").asString() != "") {
+                    if (getClaim("userId").toString() != "" && getClaim("deviceId").toString() != "") {
                         JWTPrincipal(this)
                     } else {
                         null
