@@ -1,6 +1,8 @@
 package com.example.domain.entity
 
-@kotlinx.serialization.Serializable
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class TodoRevision(
     val userId: Long,
     val deviceId: Long,

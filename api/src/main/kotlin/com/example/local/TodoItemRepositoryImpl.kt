@@ -14,6 +14,12 @@ class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
         return collectionTodoItem.find(TodoItem::userId eq userId).toList()
     }
 
+    override suspend fun deleteTodoList(userId: Long): List<TodoItem> {
+        val result = collectionTodoItem.find(TodoItem::userId eq userId).toList()
+        collectionTodoItem.deleteMany(TodoItem::userId eq userId)
+        return result
+    }
+
     override suspend fun updateTodoList(userId: Long, list: List<TodoItem>): List<TodoItem> {
         list.forEach {
             val filter = Filters.and(
@@ -50,10 +56,12 @@ class TodoItemRepositoryImpl(dataBase: CoroutineDatabase) : TodoItemRepository {
             0
         }
         collectionTodoItem.insertOne(todoItem.copy(userId = userId, id = maxId + 1))
+
         val filter = Filters.and(
             Filters.eq("userId", userId),
-            Filters.eq("id", todoItem.id)
+            Filters.eq("id", maxId + 1)
         )
+
         return collectionTodoItem.findOne(filter)
     }
 

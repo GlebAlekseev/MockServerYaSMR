@@ -22,6 +22,7 @@ import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.IOException
 import java.security.KeyFactory
@@ -131,8 +132,10 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
         }
         post("/refresh") {
             checkInternalServerError(call) {
+                println("****************** refresh")
                 val oldRefreshToken = call.receiveNullable<RefreshToken>()
-                val refreshToken = oldRefreshToken?.refresh_token ?: return@post call.respond(
+                println("****************** receiveNullable oldRefreshToken=${oldRefreshToken}")
+                val refreshToken = oldRefreshToken?.refreshToken ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
                     AuthResponse(
                         message = "BadRequest: refresh_token не предоставлен"
@@ -172,17 +175,6 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 }
             }
         }
-        authenticate("auth-jwt") {
-            post("/logout") {
-                val principal = call.principal<JWTPrincipal>()
-                val (userId, deviceId) = getUserInfo(principal)
-                LocalApi.removeUserToken(userId.toLong(), deviceId.toLong())!!
-                return@post call.respond(
-                    AuthResponse()
-                )
-            }
-        }
-
         // Делаю папку certs статикой
         static(".well-known") {
             staticRootFolder = File("certs")
@@ -228,11 +220,11 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
     return TokenPair(accessToken, refreshToken, refreshExpiresAt.time)
 }
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class TokenPair(val accessToken: String, val refreshToken: String, val expiresAt: Long)
 
-@kotlinx.serialization.Serializable
-data class RefreshToken(val refresh_token: String)
+@Serializable
+data class RefreshToken(val refreshToken: String)
 
 data class UserInfo(val userId: String, val deviceId: String)
 

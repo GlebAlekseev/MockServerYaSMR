@@ -35,6 +35,29 @@ fun Route.customRouting() {
                     )
                 }
             }
+            delete {
+                checkInternalServerError(call) {
+                    val (userId, deviceId, todoRevisionServer) = getUserInfo(call)
+                    val lastKnownRevision = call.request.header("X-Last-Known-Revision")?.toLong()
+                    if (todoRevisionServer.revision != lastKnownRevision) {
+                        return@delete call.respond(
+                            HttpStatusCode.BadRequest,
+                            TodoListResponse(
+                                message = "BadRequest: Ревизия не совпадает"
+                            )
+                        )
+                    }
+                    val deletedTodoList = LocalApi.removeTodoList(userId)
+                    val incrementedTodoRevision =
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
+                    call.respond(
+                        TodoListResponse(
+                            list = deletedTodoList,
+                            revision = incrementedTodoRevision.revision
+                        )
+                    )
+                }
+            }
             // Обновить список
             patch {
                 checkInternalServerError(call) {
@@ -48,8 +71,6 @@ fun Route.customRouting() {
                             )
                         )
                     }
-                    val incrementedTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val receivedTodoList = call.receiveNullable<List<TodoItem>>()
                     receivedTodoList ?: return@patch call.respond(
                         HttpStatusCode.BadRequest,
@@ -58,6 +79,8 @@ fun Route.customRouting() {
                         )
                     )
                     val todoList = LocalApi.updateTodoList(userId, receivedTodoList)
+                    val incrementedTodoRevision =
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     call.respond(
                         TodoListResponse(
                             list = todoList,
@@ -103,8 +126,6 @@ fun Route.customRouting() {
                             )
                         )
                     }
-                    val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val todoItem = call.receiveNullable<TodoItem>()
                     todoItem ?: return@post call.respond(
                         HttpStatusCode.BadRequest,
@@ -113,10 +134,12 @@ fun Route.customRouting() {
                         )
                     )
                     val addedTodoItem = LocalApi.addTodoItem(userId, todoItem)!!
+                    val incrementedTodoRevision =
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     call.respond(
                         TodoListResponse(
                             list = listOf(addedTodoItem),
-                            revision = newTodoRevision.revision
+                            revision = incrementedTodoRevision.revision
                         )
                     )
                 }
@@ -134,8 +157,6 @@ fun Route.customRouting() {
                             )
                         )
                     }
-                    val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     val id = call.parameters["id"] ?: return@put call.respond(
                         HttpStatusCode.BadRequest,
                         TodoListResponse(
@@ -156,10 +177,12 @@ fun Route.customRouting() {
                             message = "NotFound: Элемент с id: $id не существует"
                         )
                     )
+                    val incrementedTodoRevision =
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     call.respond(
                         TodoListResponse(
                             list = listOf(updatedTodoItem),
-                            revision = newTodoRevision.revision
+                            revision = incrementedTodoRevision.revision
                         )
                     )
                 }
@@ -177,8 +200,7 @@ fun Route.customRouting() {
                             )
                         )
                     }
-                    val newTodoRevision =
-                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
+
                     val id = call.parameters["id"] ?: return@delete call.respond(
                         HttpStatusCode.BadRequest,
                         TodoListResponse(
@@ -193,10 +215,12 @@ fun Route.customRouting() {
                             message = "NotFound: Элемент с id: $id не существует"
                         )
                     )
+                    val incrementedTodoRevision =
+                        LocalApi.setTodoRevision(TodoRevision(userId, deviceId, lastKnownRevision + 1))!!
                     call.respond(
                         TodoListResponse(
                             list = listOf(deletedTodoItem),
-                            revision = newTodoRevision.revision
+                            revision = incrementedTodoRevision.revision
                         )
                     )
                 }

@@ -20,6 +20,7 @@ object LocalApi {
     private val removeTodoItemUseCase = RemoveTodoItemUseCase(todoItemRepositoryImpl)
     private val getTodoItemUseCase = GetTodoItemUseCase(todoItemRepositoryImpl)
     private val getTodoListUseCase = GetTodoListUseCase(todoItemRepositoryImpl)
+    private val deleteTodoListUseCase = DeleteTodoListUseCase(todoItemRepositoryImpl)
     private val updateTodoListUseCase = UpdateTodoListUseCase(todoItemRepositoryImpl)
 
     private val todoRevisionRepositoryImpl = TodoRevisionRepositoryImpl(database)
@@ -32,6 +33,7 @@ object LocalApi {
     suspend fun removeTodoItem(userId: Long,id: Long): TodoItem? = removeTodoItemUseCase(userId,id)
     suspend fun getTodoItem(userId: Long,id: Long): TodoItem? = getTodoItemUseCase(userId,id)
     suspend fun getTodoList(userId: Long,): List<TodoItem> = getTodoListUseCase(userId)
+    suspend fun removeTodoList(userId: Long): List<TodoItem> = deleteTodoListUseCase(userId)
     suspend fun updateTodoList(userId: Long,todoList: List<TodoItem>): List<TodoItem> = updateTodoListUseCase(userId,todoList)
 
     suspend fun getTodoRevision(userId: Long, deviceId: Long): TodoRevision? =
