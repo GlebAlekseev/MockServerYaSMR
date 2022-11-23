@@ -3,6 +3,7 @@ package com.example.domain.entity
 @kotlinx.serialization.Serializable
 data class User(
     val id: Long = UNDEFINED,
+    val login: String,
     val displayName: String,
     val yandexId: Long,
     val accessTokenYandex: String,

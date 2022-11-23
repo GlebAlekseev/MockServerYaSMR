@@ -13,6 +13,7 @@ import com.example.server.response.AuthResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -83,17 +84,21 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 val principal: YandexPrincipal = httpResponse.body()
 
                 // Заправшиваю информацию от Яндекса
-                val userInfo: YandexUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
+
+                val httpResponseUser = applicationHttpClient.get("https://login.yandex.ru/info?format=json") {
                     headers {
                         append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
                     }
-                }.body()
+                }
+                val userInfo: YandexUser = httpResponseUser.body()
+
                 val user = LocalApi.getWithYandex(userInfo.id.toLong())
                 val resultId: Long =
                     if (user == null) {
                         // Регистрация
                         LocalApi.addUser(
                             User(
+                                login = userInfo.login,
                                 displayName = userInfo.displayName,
                                 yandexId = userInfo.id.toLong(),
                                 accessTokenYandex = principal.accessToken,
@@ -104,6 +109,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                         // Авторизация
                         LocalApi.updateUser(
                             user.copy(
+                                login = userInfo.login,
                                 displayName = userInfo.displayName,
                                 accessTokenYandex = principal.accessToken,
                                 refreshTokenYandex = principal.refreshToken
@@ -112,14 +118,16 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                     }
                 // Получение id нового утсройства
                 val deviceId = LocalApi.getNewDeviceIdForUser(resultId)
-                val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId)
+                val tokenPair = generateJWT(this@configureRouting.environment, resultId, deviceId,userInfo.login,userInfo.displayName)
                 val addedUserToken = LocalApi.addUserToken(
                     UserToken(
                         deviceId = deviceId,
                         id = resultId,
                         accessToken = tokenPair.accessToken,
                         refreshToken = tokenPair.refreshToken,
-                        refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS
+                        refreshTokenExpireAt = System.currentTimeMillis() + DAY_MILLIS,
+                        login = userInfo.login,
+                        displayName = userInfo.displayName
                     )
                 )
                 addedUserToken ?: throw IOException()
@@ -132,9 +140,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
         }
         post("/refresh") {
             checkInternalServerError(call) {
-                println("****************** refresh")
                 val oldRefreshToken = call.receiveNullable<RefreshToken>()
-                println("****************** receiveNullable oldRefreshToken=${oldRefreshToken}")
                 val refreshToken = oldRefreshToken?.refreshToken ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
                     AuthResponse(
@@ -150,14 +156,16 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
                 )
                 if (userToken.refreshTokenExpireAt > System.currentTimeMillis()) {
                     // Токен действителен
-                    val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId)
+                    val tokenPair = generateJWT(this@configureRouting.environment, userToken.id, userToken.deviceId,userToken.login,userToken.displayName)
                     LocalApi.updateUserToken(
                         UserToken(
                             deviceId = userToken.deviceId,
                             id = userToken.id,
                             accessToken = tokenPair.accessToken,
                             refreshToken = tokenPair.refreshToken,
-                            refreshTokenExpireAt = tokenPair.expiresAt
+                            refreshTokenExpireAt = tokenPair.expiresAt,
+                            login = userToken.login,
+                            displayName = userToken.displayName
                         )
                     )!!
                     return@post call.respond(
@@ -183,7 +191,7 @@ fun Application.configureRouting(applicationHttpClient: HttpClient) {
     }
 }
 
-fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Long): TokenPair {
+fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Long, login: String, displayName: String): TokenPair {
     // Приватный ключ RSA
     val privateKeyString = environment.config.property("jwt.access.privateKey").getString()
     // Изготовитель токена
@@ -214,24 +222,28 @@ fun generateJWT(environment: ApplicationEnvironment, userId: Long, deviceId: Lon
         .withIssuer(issuer)
         .withClaim("userId", userId)
         .withClaim("deviceId", deviceId)
+        .withClaim("login", login)
+        .withClaim("displayName", displayName)
         .withExpiresAt(accessExpiresAt)
         .sign(Algorithm.RSA256(publicKey as RSAPublicKey, privateKey as RSAPrivateKey))
     val refreshToken = UUID.randomUUID().toString()
-    return TokenPair(accessToken, refreshToken, refreshExpiresAt.time)
+    return TokenPair(accessToken, refreshToken, refreshExpiresAt.time, login, displayName)
 }
 
 @Serializable
-data class TokenPair(val accessToken: String, val refreshToken: String, val expiresAt: Long)
+data class TokenPair(val accessToken: String, val refreshToken: String, val expiresAt: Long, val login: String, val displayName: String)
 
 @Serializable
 data class RefreshToken(val refreshToken: String)
 
-data class UserInfo(val userId: String, val deviceId: String)
+data class UserInfo(val userId: String, val deviceId: String, val login: String, val displayName: String)
 
 private suspend fun getUserInfo(principal: JWTPrincipal?): UserInfo {
     val userId = principal!!.payload.getClaim("userId").asString()
     val deviceId = principal.payload.getClaim("deviceId").asString()
-    return UserInfo(userId, deviceId)
+    val login = principal.payload.getClaim("login").asString()
+    val displayName = principal.payload.getClaim("displayName").asString()
+    return UserInfo(userId, deviceId, login, displayName)
 }
 
 private suspend inline fun checkInternalServerError(call: ApplicationCall, block: () -> Unit) {

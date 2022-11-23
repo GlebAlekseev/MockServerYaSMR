@@ -55,6 +55,6 @@ object LocalApi {
     private fun getApiDataBase(): CoroutineDatabase {
         KMongo.createClient()
         val client = KMongo.createClient(System.getenv()["MONGO_URL"]!!).coroutine
-        return client.getDatabase("auth_v1")
+        return client.getDatabase("auth_v2")
     }
 }

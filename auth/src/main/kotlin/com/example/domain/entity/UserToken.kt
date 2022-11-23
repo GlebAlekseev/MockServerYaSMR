@@ -4,6 +4,8 @@ package com.example.domain.entity
 data class UserToken(
     val id: Long,
     val deviceId: Long,
+    val login: String,
+    val displayName: String,
     val accessToken: String,
     val refreshToken: String,
     val refreshTokenExpireAt: Long,
